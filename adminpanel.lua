@@ -1,4 +1,4 @@
--- TripleS GUI (fixed full version)
+-- TripleS GUI (fix header + add TpTool & GotoPart)
 
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
@@ -30,19 +30,17 @@ screen.Parent = parentGui
 
 -- panel utama
 local frame = Instance.new("Frame", screen)
-frame.Size = UDim2.new(0, 280, 0, 360)
-frame.Position = UDim2.new(0.5, -140, 0.5, -180)
+frame.Size = UDim2.new(0, 280, 0, 380)
+frame.Position = UDim2.new(0.5, -140, 0.5, -190)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.Active = true
 frame.Draggable = true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
--- header
+-- header (nempel di frame)
 local header = Instance.new("Frame", frame)
 header.Size = UDim2.new(1,0,0,32)
 header.BackgroundColor3 = Color3.fromRGB(45,45,45)
-header.Active = true
-header.Draggable = true
 Instance.new("UICorner", header).CornerRadius = UDim.new(0,12)
 
 -- title (brand jadi tombol minimize)
@@ -82,25 +80,22 @@ input.TextColor3 = Color3.new(1,1,1)
 input.BackgroundColor3 = Color3.fromRGB(40,40,40)
 Instance.new("UICorner", input).CornerRadius = UDim.new(0,8)
 
--- content
+-- content (tombol utama)
 local content = Instance.new("Frame", frame)
 content.Name = "Content"
-content.Size = UDim2.new(1,-24,1,-120)
+content.Size = UDim2.new(1,-24,1,-150)
 content.Position = UDim2.new(0,12,0,80)
 content.BackgroundTransparency = 1
 
 local grid = Instance.new("UIGridLayout", content)
 grid.CellPadding = UDim2.new(0,10,0,10)
-grid.CellSize = UDim2.new(0.5,-15,0,36) -- lebih pendek biar nggak nabrak
+grid.CellSize = UDim2.new(0.5,-15,0,36)
 grid.FillDirection = Enum.FillDirection.Horizontal
 grid.SortOrder = Enum.SortOrder.LayoutOrder
 grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 grid.VerticalAlignment = Enum.VerticalAlignment.Top
 
-local pad = Instance.new("UIPadding", content)
-pad.PaddingBottom = UDim.new(0,grid.CellSize.Y.Offset/4)
-
--- helper buat tombol
+-- helper tombol
 local function makeBtn(parent, text)
     local b = Instance.new("TextButton", parent)
     b.Text = text
@@ -121,6 +116,10 @@ makeBtn(content,"Set Spawn")
 makeBtn(content,"Delete Spawn")
 makeBtn(content,"Speed 23")
 makeBtn(content,"Reset Speed")
+
+-- tambahan 2 tombol baru (paling bawah sebelum footer)
+makeBtn(content,"TpTool")
+makeBtn(content,"GotoPart")
 
 -- footer tombol kecil
 local footer = Instance.new("Frame", frame)
@@ -152,7 +151,7 @@ makeIconBtn("Commands", "📜")
 makeIconBtn("Keybinds", "⌨️")
 makeIconBtn("Plugins",  "🔌")
 
--- mini button (bundaran "SSS")
+-- mini button (SSS)
 local miniBtn = Instance.new("TextButton", screen)
 miniBtn.Size = UDim2.new(0,40,0,40)
 miniBtn.Position = UDim2.new(1,-60,0,20)
@@ -166,13 +165,13 @@ miniBtn.Visible = false
 miniBtn.Active = true
 miniBtn.Draggable = true
 
--- fungsi minimize (brand jadi tombol)
+-- minimize (brand jadi tombol)
 title.MouseButton1Click:Connect(function()
     frame.Visible = false
     miniBtn.Visible = true
 end)
 
--- fungsi restore
+-- restore
 miniBtn.MouseButton1Click:Connect(function()
     frame.Visible = true
     miniBtn.Visible = false
