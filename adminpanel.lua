@@ -1,23 +1,24 @@
--- GUI Test Drag + Minimize + Close
+-- Test GUI: Drag + Minimize + Close (dengan content toggle, aman)
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 
 -- auto parent
 local parentGui
-if gethui then
-    parentGui = gethui()
-elseif syn and syn.protect_gui then
-    local s = Instance.new("ScreenGui")
-    syn.protect_gui(s)
-    s.Parent = game.CoreGui
-    parentGui = s
-else
-    parentGui = lp:WaitForChild("PlayerGui")
+if type(gethui) == "function" then
+    pcall(function() parentGui = gethui() end)
 end
+if not parentGui and syn and syn.protect_gui then
+    local s = Instance.new("ScreenGui")
+    s.Name = "TMP_Protect"
+    s.Parent = game:GetService("CoreGui")
+    pcall(function() syn.protect_gui(s) end)
+    parentGui = s
+end
+if not parentGui then parentGui = lp:WaitForChild("PlayerGui") end
 
--- hapus lama
+-- cleanup
 if parentGui:FindFirstChild("TestGuiFull") then
-    parentGui.TestGuiFull:Destroy()
+    pcall(function() parentGui.TestGuiFull:Destroy() end)
 end
 
 -- ScreenGui
@@ -27,44 +28,53 @@ screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screen.ResetOnSpawn = false
 screen.Parent = parentGui
 
--- frame utama
+-- main frame
 local frame = Instance.new("Frame", screen)
+frame.Name = "Main"
 frame.Size = UDim2.new(0, 200, 0, 120)
 frame.Position = UDim2.new(0.5, -100, 0.5, -60)
-frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 frame.Active = true
-local c = Instance.new("UICorner", frame); c.CornerRadius = UDim.new(0,12)
+local fc = Instance.new("UICorner", frame); fc.CornerRadius = UDim.new(0,12)
 
--- header
+-- header (drag area)
 local header = Instance.new("Frame", frame)
+header.Name = "Header"
 header.Size = UDim2.new(1,0,0,28)
+header.Position = UDim2.new(0,0,0,0)
 header.BackgroundColor3 = Color3.fromRGB(28,28,28)
 local hc = Instance.new("UICorner", header); hc.CornerRadius = UDim.new(0,12)
 
--- tombol minimize
+-- minimize & close buttons (on header)
 local btnMin = Instance.new("TextButton", header)
 btnMin.Size = UDim2.new(0,28,0,20)
 btnMin.Position = UDim2.new(0,4,0,4)
 btnMin.Text = "–"
+btnMin.Font = Enum.Font.SourceSansBold
 btnMin.TextSize = 18
-btnMin.TextColor3 = Color3.new(1,1,1)
 btnMin.BackgroundColor3 = Color3.fromRGB(60,60,60)
-local minc = Instance.new("UICorner", btnMin); minc.CornerRadius = UDim.new(0,6)
+local mcorner = Instance.new("UICorner", btnMin); mcorner.CornerRadius = UDim.new(0,6)
 
--- tombol close
 local btnClose = Instance.new("TextButton", header)
 btnClose.Size = UDim2.new(0,28,0,20)
 btnClose.Position = UDim2.new(1,-32,0,4)
 btnClose.Text = "✕"
+btnClose.Font = Enum.Font.SourceSansBold
 btnClose.TextSize = 16
-btnClose.TextColor3 = Color3.new(1,1,1)
 btnClose.BackgroundColor3 = Color3.fromRGB(200,60,60)
-local cc = Instance.new("UICorner", btnClose); cc.CornerRadius = UDim.new(0,6)
+local ccorner = Instance.new("UICorner", btnClose); ccorner.CornerRadius = UDim.new(0,6)
 
--- tombol TEST
-local btn = Instance.new("TextButton", frame)
+-- content frame (semua elemen yang disembunyikan akan jadi child di sini)
+local content = Instance.new("Frame", frame)
+content.Name = "Content"
+content.Size = UDim2.new(1, -12, 1, -36) -- sisa di bawah header
+content.Position = UDim2.new(0, 6, 0, 30)
+content.BackgroundTransparency = 1
+
+-- tombol TEST di content
+local btn = Instance.new("TextButton", content)
 btn.Size = UDim2.new(0, 160, 0, 40)
-btn.Position = UDim2.new(0, 20, 0, 50)
+btn.Position = UDim2.new(0, 20, 0, 10)
 btn.BackgroundColor3 = Color3.fromRGB(255,255,255)
 btn.TextColor3 = Color3.fromRGB(0,0,0)
 btn.Text = "TEST"
@@ -76,30 +86,27 @@ btn.MouseButton1Click:Connect(function()
     btn.Text = "Clicked!"
 end)
 
--- fungsi close
+-- close handler
 btnClose.MouseButton1Click:Connect(function()
-    screen:Destroy()
+    pcall(function() screen:Destroy() end)
 end)
 
--- fungsi minimize
+-- minimize handler (safest: toggle content visible)
 local minimized = false
 btnMin.MouseButton1Click:Connect(function()
     minimized = not minimized
-    for _,child in pairs(frame:GetChildren()) do
-        if child ~= header then
-            child.Visible = not minimized
-        end
-    end
+    content.Visible = not minimized
     if minimized then
-        frame.Size = UDim2.new(0,200,0,28)
+        -- shrink to header height (keep same X position)
+        frame.Size = UDim2.new(0, 200, 0, 28)
     else
-        frame.Size = UDim2.new(0,200,0,120)
+        frame.Size = UDim2.new(0, 200, 0, 120)
     end
 end)
 
--- drag support
+-- DRAG (header only)
 local UIS = game:GetService("UserInputService")
-local dragging, dragInput, dragStart, startPos
+local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
 
 local function update(input)
     local delta = input.Position - dragStart
@@ -111,11 +118,9 @@ header.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = frame.Position
-
+        dragInput = input
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
@@ -127,7 +132,5 @@ header.InputChanged:Connect(function(input)
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        update(input)
-    end
+    if input == dragInput and dragging then update(input) end
 end)
