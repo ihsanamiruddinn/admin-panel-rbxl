@@ -24,4 +24,4 @@ Script ini **support KRNL** dan executor lain yang mendukung `loadstring(game:Ht
 Salin kode ini ke executor Roblox kamu:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/USERNAME/roblox-admin-panel/main/adminpanel.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/roblox-admin-panel/main/adminpanel.lua"))()
