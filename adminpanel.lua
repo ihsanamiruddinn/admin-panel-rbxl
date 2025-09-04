@@ -140,7 +140,7 @@ local function startFly()
 
         local dir = Vector3.zero
         if move.Magnitude > 0 then
-            local composed = (right.Unit * move.X) + (forward.Unit * move.Z)
+            local composed = (right.Unit * move.X) + (forward.Unit * -move.Z)
             if composed.Magnitude > 0 then
                 dir = composed.Unit
             end
