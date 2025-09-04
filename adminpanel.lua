@@ -105,7 +105,6 @@ local function makeBtn(parent, text, command)
     b.BackgroundColor3 = Color3.fromRGB(50,50,50)
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
 
-    -- sambungkan ke command (jika ada)
     if command then
         b.MouseButton1Click:Connect(function()
             execCmd(command)
@@ -127,15 +126,43 @@ local function makeInput(parent, placeholder, command)
     Instance.new("UICorner", box).CornerRadius = UDim.new(0,6)
     box.ClearTextOnFocus = false
 
-    -- eksekusi saat enter ditekan
     box.FocusLost:Connect(function(enter)
         if enter and box.Text ~= "" then
             execCmd(command.." "..box.Text)
-            box.Text = "" -- reset setelah kirim
+            box.Text = ""
         end
     end)
     return box
 end
+
+-- fungsi notifikasi (pakai IY kalau ada, fallback kalau tidak)
+local function showNotification(title, msg)
+    if typeof(execCmd) == "function" then
+        execCmd(('notify %s|%s|TripleS GUI'):format(title, msg))
+    else
+        local note = Instance.new("TextLabel")
+        note.Size = UDim2.new(0, 220, 0, 60)
+        note.Position = UDim2.new(1, -240, 1, -100)
+        note.BackgroundColor3 = Color3.fromRGB(45,45,45)
+        note.TextColor3 = Color3.new(1,1,1)
+        note.Font = Enum.Font.SourceSansBold
+        note.TextSize = 14
+        note.TextWrapped = true
+        note.Text = title.."\n"..msg
+        note.Parent = screen
+        Instance.new("UICorner", note).CornerRadius = UDim.new(0,8)
+
+        task.delay(4, function()
+            note:Destroy()
+        end)
+    end
+end
+
+-- 🔥 tunggu sampai Infinite Yield siap
+repeat task.wait() until typeof(execCmd) == "function"
+
+-- kasih notifikasi kalau sudah siap
+showNotification("TripleS GUI", "Commands ready! Tombol sudah aktif")
 
 -- tombol utama
 makeBtn(content,"Fly","fly")
