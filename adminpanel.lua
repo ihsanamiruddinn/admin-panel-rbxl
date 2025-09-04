@@ -148,7 +148,7 @@ local function startFly()
 
         local y = (ascend - descend)
         local horiz = dir * flySpeed
-        local vert  = Vector3.new(0, y * flySpeed, 0)
+        local vert  = cam.CFrame.UpVector * (y * flySpeed)
         local targetVel
 
         if dir.Magnitude == 0 and y ~= 0 then
