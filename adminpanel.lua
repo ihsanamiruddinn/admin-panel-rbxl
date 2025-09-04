@@ -1,40 +1,18 @@
--- adminpanel.lua
--- Roblox Admin Panel (flat modern) - KRNL friendly
--- Paste this file to your repo and use:
--- loadstring(game:HttpGet("https://raw.githubusercontent.com/USERNAME/REPO/main/adminpanel.lua"))()
+-- Main Frame (ukuran IY)
+mainFrame.Size = UDim2.new(0, 250, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
 
--- ======================
--- Helper / Environment
--- ======================
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local TeleportService = game:GetService("TeleportService")
-local LocalPlayer = Players.LocalPlayer
+-- Command Bar (lebih pendek)
+commandBox.Size = UDim2.new(0.75, 0, 0, 30)
+commandBox.TextSize = 16
 
-if not LocalPlayer then return end
+-- Tombol utama (Fly, Fling, dsb.)
+btn.Size = UDim2.new(1, 0, 0, 40)
+btn.TextSize = 18
 
--- small utility
-local function notify(text, time)
-	time = time or 2.5
-	local gui = script:FindFirstChild("TMP_NOTIF_CONTAINER")
-	if not gui then
-		gui = Instance.new("ScreenGui")
-		gui.Name = "TMP_NOTIF_CONTAINER"
-		gui.ResetOnSpawn = false
-		gui.Parent = game:GetService("CoreGui")
-	end
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0, 300, 0, 36)
-	label.Position = UDim2.new(0.5, -150, 0.06, 0)
-	label.BackgroundTransparency = 0
-	label.BackgroundColor3 = Color3.fromRGB(28,28,28)
-	label.TextColor3 = Color3.new(1,1,1)
-	label.Font = Enum.Font.SourceSansSemibold
-	label.TextSize = 16
-	label.Text = text
+-- Kotak bawah (Settings, dsb.)
+sq.Size = UDim2.new(0, 40, 0, 40)
+sq.TextSize = 12	label.Text = text
 	label.BackgroundTransparency = 0
 	label.Parent = gui
 	label.ZIndex = 10000
