@@ -9,6 +9,8 @@ Script ini **support KRNL** dan executor lain yang mendukung `loadstring(game:Ht
 
 ---
 
+![Preview GUI](https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/preview.png)
+
 ## ✨ Fitur
 - ✅ **Fly / Unfly** → terbang bebas dengan kontrol WASD.  
 - ✅ **Speed 23** → sekali klik langsung jalan cepat.  
@@ -29,5 +31,3 @@ Salin kode ini ke executor Roblox kamu:
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/adminpanel.lua"))()
-
-![Preview GUI](https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/preview.png)
