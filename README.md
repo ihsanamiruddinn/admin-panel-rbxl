@@ -1,5 +1,9 @@
 # 🌟 Roblox Custom Admin Panel (Mobile Friendly)
 
+[![Status](https://img.shields.io/badge/Status-Stable-brightgreen)]()
+[![Executor](https://img.shields.io/badge/Tested-KRNL-blue)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow)]()
+
 Admin panel ringan untuk Roblox exploit, dibuat agar **mudah digunakan di PC maupun Mobile**.  
 Script ini **support KRNL** dan executor lain yang mendukung `loadstring(game:HttpGet(...))`.
 
@@ -24,4 +28,6 @@ Script ini **support KRNL** dan executor lain yang mendukung `loadstring(game:Ht
 Salin kode ini ke executor Roblox kamu:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/roblox-admin-panel/main/adminpanel.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/adminpanel.lua"))()
+
+![Preview GUI](https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/preview.png)
