@@ -37,13 +37,12 @@ frame.Active = true
 frame.Draggable = true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
--- header (nempel di frame)
+-- header
 local header = Instance.new("Frame", frame)
 header.Size = UDim2.new(1,0,0,32)
 header.BackgroundColor3 = Color3.fromRGB(45,45,45)
 Instance.new("UICorner", header).CornerRadius = UDim.new(0,12)
 
--- title (brand jadi tombol minimize)
 local title = Instance.new("TextButton", header)
 title.Size = UDim2.new(1,-60,1,0)
 title.Position = UDim2.new(0,8,0,0)
@@ -53,7 +52,6 @@ title.TextSize = 18
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 
--- tombol close
 local btnClose = Instance.new("TextButton", header)
 btnClose.Size = UDim2.new(0,24,0,24)
 btnClose.Position = UDim2.new(1,-28,0,4)
@@ -63,12 +61,11 @@ btnClose.TextSize = 14
 btnClose.TextColor3 = Color3.new(1,1,1)
 btnClose.BackgroundColor3 = Color3.fromRGB(200,60,60)
 Instance.new("UICorner", btnClose).CornerRadius = UDim.new(0,6)
-
 btnClose.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
 
--- input bar
+-- input bar atas
 local input = Instance.new("TextBox", frame)
 input.Size = UDim2.new(1,-24,0,28)
 input.Position = UDim2.new(0,12,0,40)
@@ -80,12 +77,14 @@ input.TextColor3 = Color3.new(1,1,1)
 input.BackgroundColor3 = Color3.fromRGB(40,40,40)
 Instance.new("UICorner", input).CornerRadius = UDim.new(0,8)
 
--- content (tombol utama)
-local content = Instance.new("Frame", frame)
+-- 🔥 content pakai ScrollingFrame
+local content = Instance.new("ScrollingFrame", frame)
 content.Name = "Content"
 content.Size = UDim2.new(1,-24,1,-150)
 content.Position = UDim2.new(0,12,0,80)
 content.BackgroundTransparency = 1
+content.ScrollBarThickness = 6
+content.CanvasSize = UDim2.new(0,0,0,0)
 
 local grid = Instance.new("UIGridLayout", content)
 grid.CellPadding = UDim2.new(0,10,0,10)
@@ -94,6 +93,9 @@ grid.FillDirection = Enum.FillDirection.Horizontal
 grid.SortOrder = Enum.SortOrder.LayoutOrder
 grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 grid.VerticalAlignment = Enum.VerticalAlignment.Top
+grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    content.CanvasSize = UDim2.new(0,0,0,grid.AbsoluteContentSize.Y + 20)
+end)
 
 -- helper tombol
 local function makeBtn(parent, text, command)
@@ -114,7 +116,7 @@ local function makeBtn(parent, text, command)
     return b
 end
 
--- helper input (TextBox mirip tombol)
+-- helper input box
 local function makeInput(parent, placeholder, command)
     local box = Instance.new("TextBox", parent)
     box.PlaceholderText = placeholder
@@ -135,7 +137,7 @@ local function makeInput(parent, placeholder, command)
     return box
 end
 
--- fungsi notifikasi (pakai IY kalau ada, fallback kalau tidak)
+-- notifikasi
 local function showNotification(title, msg)
     if typeof(execCmd) == "function" then
         execCmd(('notify %s|%s|TripleS GUI'):format(title, msg))
@@ -151,17 +153,12 @@ local function showNotification(title, msg)
         note.Text = title.."\n"..msg
         note.Parent = screen
         Instance.new("UICorner", note).CornerRadius = UDim.new(0,8)
-
-        task.delay(4, function()
-            note:Destroy()
-        end)
+        task.delay(4, function() note:Destroy() end)
     end
 end
 
--- 🔥 tunggu sampai Infinite Yield siap
+-- tunggu IY siap
 repeat task.wait() until typeof(execCmd) == "function"
-
--- kasih notifikasi kalau sudah siap
 showNotification("TripleS GUI", "Commands ready! Tombol sudah aktif")
 
 -- tombol utama
@@ -174,11 +171,11 @@ makeBtn(content,"Delete Spawn","nospawn")
 makeBtn(content,"Speed 23","speed 23")
 makeBtn(content,"Tptool","tptool")
 
--- ganti jadi input box
+-- input box
 makeInput(content,"TGoto","tgoto")
 makeInput(content,"GotoPart","gotopart")
 
--- footer tombol kecil
+-- footer
 local footer = Instance.new("Frame", frame)
 footer.Size = UDim2.new(1,-24,0,50)
 footer.Position = UDim2.new(0,12,1,-56)
@@ -208,7 +205,7 @@ makeIconBtn("Commands", "📜")
 makeIconBtn("Keybinds", "⌨️")
 makeIconBtn("Plugins",  "🔌")
 
--- mini button (SSS)
+-- mini button
 local miniBtn = Instance.new("TextButton", screen)
 miniBtn.Size = UDim2.new(0,40,0,40)
 miniBtn.Position = UDim2.new(1,-60,0,20)
@@ -222,13 +219,11 @@ miniBtn.Visible = false
 miniBtn.Active = true
 miniBtn.Draggable = true
 
--- minimize (brand jadi tombol)
 title.MouseButton1Click:Connect(function()
     frame.Visible = false
     miniBtn.Visible = true
 end)
 
--- restore
 miniBtn.MouseButton1Click:Connect(function()
     frame.Visible = true
     miniBtn.Visible = false
