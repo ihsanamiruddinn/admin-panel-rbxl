@@ -115,10 +115,10 @@ makeBtn(content,"Unfling")
 makeBtn(content,"Set Spawn")
 makeBtn(content,"Delete Spawn")
 makeBtn(content,"Speed 23")
-makeBtn(content,"Reset Speed")
+makeBtn(content,"Tptool")
 
 -- tambahan 2 tombol baru (paling bawah sebelum footer)
-makeBtn(content,"TpTool")
+makeBtn(content,"TGoto")
 makeBtn(content,"GotoPart")
 
 -- footer tombol kecil
