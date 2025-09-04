@@ -1,4 +1,4 @@
--- Admin Panel Layout Penuh (tanpa fungsi)
+-- Test: Minimize jadi bundaran "SSS"
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 
@@ -16,25 +16,79 @@ end
 if not parentGui then parentGui = lp:WaitForChild("PlayerGui") end
 
 -- cleanup
-if parentGui:FindFirstChild("AdminPanelLayout") then
-    parentGui.AdminPanelLayout:Destroy()
+if parentGui:FindFirstChild("TestMiniSSS") then
+    parentGui.TestMiniSSS:Destroy()
 end
 
--- ScreenGui
 local screen = Instance.new("ScreenGui")
-screen.Name = "AdminPanelLayout"
+screen.Name = "TestMiniSSS"
 screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screen.ResetOnSpawn = false
 screen.Parent = parentGui
 
--- main frame
+-- panel utama
 local frame = Instance.new("Frame", screen)
-frame.Size = UDim2.new(0, 250, 0, 300)
-frame.Position = UDim2.new(0.5, -125, 0.5, -150)
+frame.Size = UDim2.new(0, 200, 0, 120)
+frame.Position = UDim2.new(0.5, -100, 0.5, -60)
 frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 frame.Active = true
 local fc = Instance.new("UICorner", frame); fc.CornerRadius = UDim.new(0,12)
 
+-- header
+local header = Instance.new("Frame", frame)
+header.Size = UDim2.new(1,0,0,28)
+header.BackgroundColor3 = Color3.fromRGB(28,28,28)
+
+-- tombol minimize
+local btnMin = Instance.new("TextButton", header)
+btnMin.Size = UDim2.new(0,24,0,20)
+btnMin.Position = UDim2.new(0,4,0,4)
+btnMin.Text = "–"
+btnMin.Font = Enum.Font.SourceSansBold
+btnMin.TextSize = 16
+btnMin.TextColor3 = Color3.new(1,1,1)
+btnMin.BackgroundColor3 = Color3.fromRGB(60,60,60)
+local mcorner = Instance.new("UICorner", btnMin); mcorner.CornerRadius = UDim.new(0,6)
+
+-- tombol close
+local btnClose = Instance.new("TextButton", header)
+btnClose.Size = UDim2.new(0,24,0,20)
+btnClose.Position = UDim2.new(1,-28,0,4)
+btnClose.Text = "✕"
+btnClose.Font = Enum.Font.SourceSansBold
+btnClose.TextSize = 14
+btnClose.TextColor3 = Color3.new(1,1,1)
+btnClose.BackgroundColor3 = Color3.fromRGB(200,60,60)
+local cc = Instance.new("UICorner", btnClose); cc.CornerRadius = UDim.new(0,6)
+
+-- mini button (bundaran "SSS")
+local miniBtn = Instance.new("TextButton", screen)
+miniBtn.Size = UDim2.new(0,50,0,50)
+miniBtn.Position = UDim2.new(0,20,0.8,0)
+miniBtn.BackgroundColor3 = Color3.fromRGB(60,60,200)
+miniBtn.Text = "SSS"
+miniBtn.TextColor3 = Color3.new(1,1,1)
+miniBtn.Font = Enum.Font.SourceSansBold
+miniBtn.TextSize = 14
+local mc = Instance.new("UICorner", miniBtn); mc.CornerRadius = UDim.new(1,0)
+miniBtn.Visible = false
+
+-- aksi tombol close
+btnClose.MouseButton1Click:Connect(function()
+    screen:Destroy()
+end)
+
+-- aksi tombol minimize
+btnMin.MouseButton1Click:Connect(function()
+    frame.Visible = false
+    miniBtn.Visible = true
+end)
+
+-- aksi miniBtn
+miniBtn.MouseButton1Click:Connect(function()
+    frame.Visible = true
+    miniBtn.Visible = false
+end)
 -- header
 local header = Instance.new("Frame", frame)
 header.Size = UDim2.new(1,0,0,28)
