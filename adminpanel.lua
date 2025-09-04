@@ -1,7 +1,8 @@
--- GUI TripleS dengan tombol SSS (pojok kanan atas + animasi)
+-- GUI TripleS (fix tombol SSS pojok kanan atas + drag window)
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local lp = Players.LocalPlayer
 
 -- parent
@@ -31,7 +32,6 @@ frame.Size = UDim2.new(0, 280, 0, 340)
 frame.Position = UDim2.new(1, -300, 0, 20) -- pojok kanan atas
 frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 frame.Active = true
-frame.Visible = true
 local fc = Instance.new("UICorner", frame); fc.CornerRadius = UDim.new(0,12)
 
 -- header
@@ -70,7 +70,7 @@ btnClose.TextColor3 = Color3.new(1,1,1)
 btnClose.BackgroundColor3 = Color3.fromRGB(200,60,60)
 local cc = Instance.new("UICorner", btnClose); cc.CornerRadius = UDim.new(0,6)
 
--- text input bar (di bawah title)
+-- input bar
 local inputBar = Instance.new("TextBox", frame)
 inputBar.Size = UDim2.new(1,-20,0,28)
 inputBar.Position = UDim2.new(0,10,0,48)
@@ -89,11 +89,10 @@ content.Size = UDim2.new(1,-20,1,-90)
 content.Position = UDim2.new(0,10,0,84)
 content.BackgroundTransparency = 1
 
--- grid tombol
+-- tombol grid
 local uiGrid = Instance.new("UIGridLayout", content)
 uiGrid.CellPadding = UDim2.new(0,10,0,10)
 uiGrid.CellSize = UDim2.new(0.5,-5,0,40) -- dua kolom
-uiGrid.FillDirection = Enum.FillDirection.Horizontal
 uiGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 local function makeBtn(text)
@@ -108,43 +107,31 @@ local function makeBtn(text)
     return b
 end
 
--- isi tombol
-makeBtn("Fly")
-makeBtn("Unfly")
-makeBtn("Fling")
-makeBtn("Unfling")
-makeBtn("Set Spawn")
-makeBtn("Delete Spawn")
-makeBtn("Speed 23")
-makeBtn("Reset Speed")
-makeBtn("Settings")
-makeBtn("Commands")
-makeBtn("Keybinds")
-makeBtn("Plugins")
+for _,name in ipairs({"Fly","Unfly","Fling","Unfling","Set Spawn","Delete Spawn","Speed 23","Reset Speed","Settings","Commands","Keybinds","Plugins"}) do
+    makeBtn(name)
+end
 
--- miniBtn (SSS)
+-- miniBtn (pojok kanan atas fix)
 local miniBtn = Instance.new("TextButton", screen)
 miniBtn.Size = UDim2.new(0,50,0,50)
-miniBtn.Position = UDim2.new(1,-70,0,20) -- kanan atas
-miniBtn.BackgroundColor3 = Color3.new(0,0,0) -- hitam
+miniBtn.AnchorPoint = Vector2.new(1,0) -- biar nempel kanan atas
+miniBtn.Position = UDim2.new(1,-20,0,20)
+miniBtn.BackgroundColor3 = Color3.new(0,0,0)
 miniBtn.Text = "SSS"
-miniBtn.TextColor3 = Color3.new(1,1,1) -- putih
+miniBtn.TextColor3 = Color3.new(1,1,1)
 miniBtn.Font = Enum.Font.SourceSansBold
 miniBtn.TextSize = 14
 local mc = Instance.new("UICorner", miniBtn); mc.CornerRadius = UDim.new(1,0)
 miniBtn.Visible = false
 
--- animasi
+-- tween helper
 local function fade(obj, goalProps, duration)
     TweenService:Create(obj, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goalProps):Play()
 end
 
--- aksi close
-btnClose.MouseButton1Click:Connect(function()
-    screen:Destroy()
-end)
+-- aksi tombol
+btnClose.MouseButton1Click:Connect(function() screen:Destroy() end)
 
--- aksi minimize (tutup frame → munculin tombol SSS)
 btnMin.MouseButton1Click:Connect(function()
     fade(frame, {Size = UDim2.new(0,280,0,0)}, 0.3)
     task.wait(0.3)
@@ -154,10 +141,45 @@ btnMin.MouseButton1Click:Connect(function()
     fade(miniBtn, {BackgroundTransparency = 0}, 0.3)
 end)
 
--- aksi miniBtn (balikin frame)
 miniBtn.MouseButton1Click:Connect(function()
     miniBtn.Visible = false
     frame.Visible = true
     frame.Size = UDim2.new(0,280,0,0)
     fade(frame, {Size = UDim2.new(0,280,0,340)}, 0.3)
+end)
+
+-- drag support
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
 end)
