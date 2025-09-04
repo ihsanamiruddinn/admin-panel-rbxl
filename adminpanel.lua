@@ -96,7 +96,7 @@ grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 grid.VerticalAlignment = Enum.VerticalAlignment.Top
 
 -- helper tombol
-local function makeBtn(parent, text)
+local function makeBtn(parent, text, command)
     local b = Instance.new("TextButton", parent)
     b.Text = text
     b.Font = Enum.Font.SourceSansBold
@@ -104,22 +104,52 @@ local function makeBtn(parent, text)
     b.TextColor3 = Color3.new(1,1,1)
     b.BackgroundColor3 = Color3.fromRGB(50,50,50)
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+
+    -- sambungkan ke command (jika ada)
+    if command then
+        b.MouseButton1Click:Connect(function()
+            execCmd(command)
+        end)
+    end
+
     return b
 end
 
--- tombol utama
-makeBtn(content,"Fly")
-makeBtn(content,"Unfly")
-makeBtn(content,"Fling")
-makeBtn(content,"Unfling")
-makeBtn(content,"Set Spawn")
-makeBtn(content,"Delete Spawn")
-makeBtn(content,"Speed 23")
-makeBtn(content,"Tptool")
+-- helper input (TextBox mirip tombol)
+local function makeInput(parent, placeholder, command)
+    local box = Instance.new("TextBox", parent)
+    box.PlaceholderText = placeholder
+    box.Text = ""
+    box.Font = Enum.Font.SourceSansBold
+    box.TextSize = 14
+    box.TextColor3 = Color3.new(1,1,1)
+    box.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0,6)
+    box.ClearTextOnFocus = false
 
--- tambahan 2 tombol baru (paling bawah sebelum footer)
-makeBtn(content,"TGoto")
-makeBtn(content,"GotoPart")
+    -- eksekusi saat enter ditekan
+    box.FocusLost:Connect(function(enter)
+        if enter and box.Text ~= "" then
+            execCmd(command.." "..box.Text)
+            box.Text = "" -- reset setelah kirim
+        end
+    end)
+    return box
+end
+
+-- tombol utama
+makeBtn(content,"Fly","fly")
+makeBtn(content,"Unfly","unfly")
+makeBtn(content,"Fling","fling")
+makeBtn(content,"Unfling","unfling")
+makeBtn(content,"Set Spawn","spawn")
+makeBtn(content,"Delete Spawn","nospawn")
+makeBtn(content,"Speed 23","speed 23")
+makeBtn(content,"Tptool","tptool")
+
+-- ganti jadi input box
+makeInput(content,"TGoto","tgoto")
+makeInput(content,"GotoPart","gotopart")
 
 -- footer tombol kecil
 local footer = Instance.new("Frame", frame)
