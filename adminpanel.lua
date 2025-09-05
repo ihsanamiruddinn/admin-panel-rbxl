@@ -110,7 +110,7 @@ local Window = WindUI:CreateWindow({
     Icon = "geist:window",
     Author = "loc:WELCOME",
     Folder = "WindUI_Example",
-    Size = UDim2.fromOffset(580, 490),
+    Size = UDim2.fromOffset(300, 260),
     Theme = "Dark",
     -- Background = WindUI:Gradient({
     --     ["0"] = { Color = Color3.fromHex("#0f0c29"), Transparency = 1 },
