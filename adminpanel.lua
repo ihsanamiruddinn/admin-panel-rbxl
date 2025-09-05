@@ -589,4 +589,411 @@ TabHandles.Admin:Input({
             local target = findPlayerByName(name)
             local char, hrp = EnsureChar()
             if target and target.Character and hrp then
-             
+                local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+                if targetHRP then
+                    hrp.CFrame = targetHRP.CFrame + Vector3.new(0,2,0)
+                    WindUI:Notify({ Title = "Command", Content = "Teleported to "..target.Name, Duration = 2 })
+                else
+                    WindUI:Notify({ Title = "Command", Content = "Target HRP not found.", Duration = 2 })
+                end
+            else
+                WindUI:Notify({ Title = "Command", Content = "Player not found or char not ready.", Duration = 2 })
+            end
+        elseif lower:sub(1,7) == ";bring " or lower:sub(1,6) == ";goto " then
+            local name = cmd:match("^;bring%s+(.+)$") or cmd:match("^;goto%s+(.+)$")
+            if name then
+                local target = findPlayerByName(name)
+                local char, hrp = EnsureChar()
+                if target and target.Character and hrp then
+                    target.Character:MoveTo(hrp.Position + Vector3.new(0,2,0))
+                    WindUI:Notify({ Title = "Command", Content = "Requested bring for "..target.Name, Duration = 2 })
+                else
+                    WindUI:Notify({ Title = "Command", Content = "Player not found or char not ready.", Duration = 2 })
+                end
+            end
+        elseif lower:sub(1,9) == ";headsit " then
+            local name = cmd:sub(10)
+            local target = findPlayerByName(name)
+            if target then
+                doHeadsit(target)
+            else
+                WindUI:Notify({ Title = "Command", Content = "Player not found.", Duration = 2 })
+            end
+        elseif lower:sub(1,9) == ";spectate " then
+            local name = cmd:sub(10)
+            local target = findPlayerByName(name)
+            if target and target.Character then
+                local cam = workspace.CurrentCamera
+                cam.CameraSubject = GetHumanoid(target.Character) or target.Character:FindFirstChild("HumanoidRootPart")
+                cam.CameraType = Enum.CameraType.Custom
+                WindUI:Notify({ Title = "Command", Content = "Spectating "..target.Name, Duration = 2 })
+            else
+                WindUI:Notify({ Title = "Command", Content = "Player not found.", Duration = 2 })
+            end
+        else
+            WindUI:Notify({ Title = "Command", Content = "Unknown command.", Duration = 2 })
+        end
+    end
+})
+
+-- =============
+-- Emote System
+-- =============
+-- Emote table: name -> animationId (replace IDs if you want custom ones)
+-- NOTE: Animation IDs below are examples. Replace with valid animation asset ids if needed.
+local Emotes = {
+    { Name = "Dance 1 (Energetic)", AnimationId = "rbxassetid://185763438" }, -- example
+    { Name = "Dance 2 (Hype)", AnimationId = "rbxassetid://827219394" }, -- example
+    { Name = "Dance 3 (Groovy)", AnimationId = "rbxassetid://616441186" }, -- example
+    { Name = "Float (Levitate)", AnimationId = nil, IsFloat = true }, -- custom: will apply upward BodyVelocity
+    { Name = "Freeze (Hover)", AnimationId = nil, IsFreeze = true }, -- custom freeze (anchoring + BV)
+}
+
+-- Player animation control
+local currentAnimTrack = nil
+local currentFloatBV = nil
+local currentFreezeAnchors = {}
+
+local function stopCurrentEmote()
+    if currentAnimTrack and currentAnimTrack.IsPlaying then
+        currentAnimTrack:Stop()
+    end
+    currentAnimTrack = nil
+    if currentFloatBV and currentFloatBV.Parent then
+        currentFloatBV:Destroy()
+        currentFloatBV = nil
+    end
+    -- unanchor if freeze used
+    for _, p in pairs(currentFreezeAnchors) do
+        if p and p.Parent and p:IsA("BasePart") then
+            p.Anchored = false
+        end
+    end
+    currentFreezeAnchors = {}
+end
+
+local function playEmote(emote)
+    stopCurrentEmote()
+    local char, hrp, hum = EnsureChar()
+    if not hum or not hrp then
+        WindUI:Notify({ Title = "Emote", Content = "Character not ready.", Duration = 2 })
+        return
+    end
+
+    if emote.IsFloat then
+        -- create BodyVelocity to slowly lift the player (simple)
+        local bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(0, 1e4, 0)
+        bv.P = 1000
+        bv.Velocity = Vector3.new(0, 12, 0)
+        bv.Parent = hrp
+        currentFloatBV = bv
+        WindUI:Notify({ Title = "Emote", Content = "Floating...", Duration = 3 })
+        return
+    elseif emote.IsFreeze then
+        -- anchor all BaseParts to simulate freeze/hover
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Anchored = true
+                table.insert(currentFreezeAnchors, part)
+            end
+        end
+        WindUI:Notify({ Title = "Emote", Content = "Freeze emote active.", Duration = 3 })
+        return
+    elseif emote.AnimationId and typeof(emote.AnimationId) == "string" then
+        -- create animation
+        local anim = Instance.new("Animation")
+        anim.AnimationId = emote.AnimationId
+        local track = hum:LoadAnimation(anim)
+        track.Priority = Enum.AnimationPriority.Action
+        track:Play()
+        currentAnimTrack = track
+        WindUI:Notify({ Title = "Emote", Content = "Playing: "..emote.Name, Duration = 3 })
+        return
+    else
+        WindUI:Notify({ Title = "Emote", Content = "No animation set for "..emote.Name, Duration = 3 })
+    end
+end
+
+-- Emote list in Main (quick access)
+TabHandles.Admin:Divider()
+TabHandles.Admin:Paragraph({ Title = "Emotes (quick)", Desc = "Play some emotes quickly", Image = "music", ImageSize = 18 })
+
+local emoteRow = TabHandles.Admin:Section({ Title = "Emote List" })
+for _, e in ipairs(Emotes) do
+    emoteRow:Button({
+        Title = e.Name,
+        Icon = "play",
+        Callback = (function(em)
+            return function()
+                playEmote(em)
+            end
+        end)(e)
+    })
+end
+emoteRow:Button({
+    Title = "Stop Emote",
+    Icon = "stop-circle",
+    Callback = function()
+        stopCurrentEmote()
+        WindUI:Notify({ Title = "Emote", Content = "Stopped emote.", Duration = 2 })
+    end
+})
+
+-- Emote Tab (detailed)
+TabHandles.EmoteTab:Paragraph({ Title = "Emote Center", Desc = "Play/Stop emotes. Replace animation IDs with your favorites.", Image = "music" })
+TabHandles.EmoteTab:Divider()
+for i, e in ipairs(Emotes) do
+    TabHandles.EmoteTab:Section({ Title = e.Name, Icon = "play" })
+    TabHandles.EmoteTab:Button({
+        Title = "Play",
+        Icon = "play",
+        Callback = (function(em) return function() playEmote(em) end end)(e)
+    })
+    TabHandles.EmoteTab:Button({
+        Title = "Stop",
+        Icon = "stop-circle",
+        Callback = function() stopCurrentEmote() end
+    })
+    -- Input to change AnimationId for this emote
+    TabHandles.EmoteTab:Input({
+        Title = "Set AnimationId for "..e.Name.." (rbxassetid://12345)",
+        Placeholder = e.AnimationId or "rbxassetid://",
+        Callback = function(val)
+            if val and val:match("%d+") then
+                e.AnimationId = val:match("rbxassetid://(%d+)") and ("rbxassetid://"..val:match("%d+")) or "rbxassetid://"..val
+                WindUI:Notify({ Title = "Emote", Content = "Animation set for "..e.Name, Duration = 2 })
+            else
+                WindUI:Notify({ Title = "Emote", Content = "Invalid id. Use rbxassetid://<id>", Duration = 2 })
+            end
+        end
+    })
+    TabHandles.EmoteTab:Divider()
+end
+
+-- =============
+-- Appearance & Config (kept intact, adapted)
+-- =============
+local themes = {}
+for themeName, _ in pairs(WindUI:GetThemes()) do
+    table.insert(themes, themeName)
+end
+table.sort(themes)
+
+TabHandles.Appearance:Paragraph({
+    Title = "Customize Interface",
+    Desc = "Change theme & transparency",
+    Image = "palette",
+    ImageSize = 20,
+    Color = "White"
+})
+
+local canchangetheme = true
+local canchangedropdown = true
+
+local themeDropdown = TabHandles.Appearance:Dropdown({
+    Title = "Select Theme",
+    Values = themes,
+    Value = WindUI:GetCurrentTheme(),
+    Callback = function(theme)
+        canchangedropdown = false
+        WindUI:SetTheme(theme)
+        WindUI:Notify({
+            Title = "Theme Applied",
+            Content = theme,
+            Icon = "palette",
+            Duration = 2
+        })
+        canchangedropdown = true
+    end
+})
+
+local transparencySlider = TabHandles.Appearance:Slider({
+    Title = "Window Transparency",
+    Value = {
+        Min = 0,
+        Max = 1,
+        Default = WindUI.TransparencyValue or 0.2,
+    },
+    Step = 0.05,
+    Callback = function(value)
+        WindUI.TransparencyValue = tonumber(value)
+        Window:ToggleTransparency(tonumber(value) > 0)
+    end
+})
+
+local ThemeToggle = TabHandles.Appearance:Toggle({
+    Title = "Enable Dark Mode",
+    Desc = "Use dark color scheme",
+    Value = (WindUI:GetCurrentTheme() == "Dark"),
+    Callback = function(state)
+        if canchangetheme then
+            WindUI:SetTheme(state and "Dark" or "Light")
+        end
+        if canchangedropdown then
+            themeDropdown:Select(state and "Dark" or "Light")
+        end
+    end
+})
+
+WindUI:OnThemeChange(function(theme)
+    canchangetheme = false
+    ThemeToggle:Set(theme == "Dark")
+    canchangetheme = true
+end)
+
+-- Config manager usage (if available)
+TabHandles.Config:Paragraph({
+    Title = "Configuration Manager",
+    Desc = "Save and load your settings",
+    Image = "save",
+    ImageSize = 20,
+    Color = "White"
+})
+
+local configName = "default"
+local configFile = nil
+local MyPlayerData = {
+    name = LocalPlayer.Name,
+    level = 1,
+    inventory = {}
+}
+
+TabHandles.Config:Input({
+    Title = "Config Name",
+    Value = configName,
+    Callback = function(value)
+        configName = value or "default"
+    end
+})
+
+local ConfigManager = Window.ConfigManager
+if ConfigManager then
+    ConfigManager:Init(Window)
+
+    TabHandles.Config:Button({
+        Title = "Save Configuration",
+        Icon = "save",
+        Variant = "Primary",
+        Callback = function()
+            configFile = ConfigManager:CreateConfig(configName)
+
+            -- register controls to save state
+            -- (example: save theme & transparency and toggles)
+            configFile:Register("themeDropdown", themeDropdown)
+            configFile:Register("transparencySlider", transparencySlider)
+            configFile:Register("flyToggle", flyToggle)
+            configFile:Register("noclipToggle", noclipToggle)
+            configFile:Register("flingToggle", flingToggle)
+
+            configFile:Set("playerData", MyPlayerData)
+            configFile:Set("lastSave", os.date("%Y-%m-%d %H:%M:%S"))
+
+            if configFile:Save() then
+                WindUI:Notify({
+                    Title = "Save Config",
+                    Content = "Saved as: "..configName,
+                    Icon = "check",
+                    Duration = 3
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "Failed to save config",
+                    Icon = "x",
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    TabHandles.Config:Button({
+        Title = "Load Configuration",
+        Icon = "folder",
+        Callback = function()
+            configFile = ConfigManager:CreateConfig(configName)
+            local loadedData = configFile:Load()
+
+            if loadedData then
+                if loadedData.playerData then
+                    MyPlayerData = loadedData.playerData
+                end
+
+                local lastSave = loadedData.lastSave or "Unknown"
+                WindUI:Notify({
+                    Title = "Load Config",
+                    Content = "Loaded: "..configName.."\nLast save: "..lastSave,
+                    Icon = "refresh-cw",
+                    Duration = 5
+                })
+            else
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "Failed to load config",
+                    Icon = "x",
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+else
+    TabHandles.Config:Paragraph({
+        Title = "Config Manager Not Available",
+        Desc = "This feature requires ConfigManager",
+        Image = "alert-triangle",
+        ImageSize = 20,
+        Color = "White"
+    })
+end
+
+-- Footer: custom credit to your GitHub
+TabHandles.Config:Paragraph({
+    Title = "Created with ❤️ by ihsanamiruddinn",
+    Desc = "github.com/ihsanamiruddinn",
+    Image = "github",
+    ImageSize = 20,
+    Color = "Grey",
+    Buttons = {
+        {
+            Title = "Copy Link",
+            Icon = "copy",
+            Variant = "Tertiary",
+            Callback = function()
+                setclipboard("https://github.com/ihsanamiruddinn")
+                WindUI:Notify({
+                    Title = "Copied!",
+                    Content = "GitHub link copied to clipboard",
+                    Duration = 2
+                })
+            end
+        }
+    }
+})
+
+-- Cleanup on close/destroy (save or disable features)
+Window:OnClose(function()
+    -- disable features safely
+    disableFly()
+    setNoclip(false)
+    disableFling()
+    stopCurrentEmote()
+
+    -- auto-save if available
+    if ConfigManager and configFile then
+        configFile:Set("playerData", MyPlayerData)
+        configFile:Set("lastSave", os.date("%Y-%m-%d %H:%M:%S"))
+        configFile:Save()
+    end
+    print("Window closed - admin UI cleaned up")
+end)
+
+Window:OnDestroy(function()
+    disableFly()
+    setNoclip(false)
+    disableFling()
+    stopCurrentEmote()
+    print("Window destroyed - cleaned")
+end)
+
+-- End of script
