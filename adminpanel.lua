@@ -8,9 +8,10 @@ WindUI:Localization({
         ["en"] = {
             ["ADMIN_PANEL"] = "Admin Panel",
             ["WELCOME"] = "Welcome, Admin!",
-            ["COMMANDS"] = "Commands",
-            ["UTILITIES"] = "Utilities",
-            ["COMMAND_BAR"] = "Command Bar"
+            ["COMMANDS"] = "Admin Controls",
+            ["SETTINGS"] = "Settings",
+            ["APPEARANCE"] = "Appearance",
+            ["CONFIGURATION"] = "Configuration",
         }
     }
 })
@@ -18,7 +19,7 @@ WindUI:Localization({
 WindUI:SetTheme("Dark")
 WindUI.TransparencyValue = 0.15
 
--- Buat window utama
+-- Window utama
 local Window = WindUI:CreateWindow({
     Title = "loc:ADMIN_PANEL",
     Icon = "shield",
@@ -31,15 +32,17 @@ local Window = WindUI:CreateWindow({
 
 -- Bagian Tab
 local Tabs = {
-    Commands = Window:Section({ Title = "loc:COMMANDS", Opened = true }),
-    Utilities = Window:Section({ Title = "loc:UTILITIES" })
+    Admin = Window:Section({ Title = "loc:COMMANDS", Opened = true }),
+    Settings = Window:Section({ Title = "loc:SETTINGS" })
 }
 
--- Tab Commands (fitur admin)
-local Cmds = Tabs.Commands:Tab({ Title = "Admin Tools", Icon = "settings" })
+-- ====================
+-- ADMIN TAB
+-- ====================
+local AdminTab = Tabs.Admin:Tab({ Title = "Admin Tools", Icon = "settings" })
 
 -- Fly
-Cmds:Button({
+AdminTab:Button({
     Title = "Fly",
     Icon = "feather",
     Callback = function()
@@ -52,13 +55,12 @@ Cmds:Button({
 })
 
 -- Noclip
-Cmds:Button({
+AdminTab:Button({
     Title = "Noclip",
     Icon = "x",
     Callback = function()
         local plr = game.Players.LocalPlayer
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        for _, part in pairs(char:GetDescendants()) do
+        for _, part in pairs(plr.Character:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
             end
@@ -67,8 +69,8 @@ Cmds:Button({
     end
 })
 
--- Teleport
-Cmds:Input({
+-- Teleport to player
+AdminTab:Input({
     Title = "Teleport To Player",
     Placeholder = "Enter Player Name",
     Callback = function(name)
@@ -82,10 +84,8 @@ Cmds:Input({
     end
 })
 
--- Tab Utilities
-local Utils = Tabs.Utilities:Tab({ Title = "Fun", Icon = "smile" })
-
-Utils:Button({
+-- Give Sword
+AdminTab:Button({
     Title = "Give Sword",
     Icon = "sword",
     Callback = function()
@@ -98,22 +98,16 @@ Utils:Button({
     end
 })
 
--- ======================
--- COMMAND BAR
--- ======================
-local CmdBar = Window:Section({ Title = "loc:COMMAND_BAR", Opened = true })
-local CmdTab = CmdBar:Tab({ Title = "Executor", Icon = "terminal" })
-
-CmdTab:Input({
-    Title = "Enter Command",
+-- Command Bar (digabung di Admin Tab)
+AdminTab:Input({
+    Title = "Command Bar",
     Placeholder = ";fly / ;noclip / ;tp Player",
     Callback = function(cmd)
         cmd = string.lower(cmd)
 
         if cmd == ";fly" then
             local plr = game.Players.LocalPlayer
-            local char = plr.Character or plr.CharacterAdded:Wait()
-            char:WaitForChild("Humanoid"):ChangeState(Enum.HumanoidStateType.Physics)
+            plr.Character:WaitForChild("Humanoid"):ChangeState(Enum.HumanoidStateType.Physics)
             WindUI:Notify({ Title = "Command", Content = "Fly activated", Duration = 2 })
 
         elseif cmd == ";noclip" then
@@ -134,9 +128,73 @@ CmdTab:Input({
             else
                 WindUI:Notify({ Title = "Error", Content = "Player not found", Duration = 2 })
             end
-
         else
             WindUI:Notify({ Title = "Error", Content = "Unknown command", Duration = 2 })
         end
     end
+})
+
+-- ====================
+-- SETTINGS TAB
+-- ====================
+local SettingsTab = Tabs.Settings:Tab({ Title = "loc:APPEARANCE", Icon = "palette" })
+SettingsTab:ThemePicker({
+    Title = "Theme",
+    Callback = function(theme)
+        WindUI:SetTheme(theme)
+    end
+})
+SettingsTab:Slider({
+    Title = "Transparency",
+    Min = 0,
+    Max = 1,
+    Value = WindUI.TransparencyValue,
+    Callback = function(value)
+        WindUI.TransparencyValue = value
+    end
+})
+
+-- Config tab
+local ConfigTab = Tabs.Settings:Tab({ Title = "loc:CONFIGURATION", Icon = "settings" })
+ConfigTab:Button({
+    Title = "Save Config",
+    Icon = "save",
+    Callback = function()
+        WindUI:SaveConfig()
+        WindUI:Notify({ Title = "Config", Content = "Configuration saved!", Duration = 2 })
+    end
+})
+ConfigTab:Button({
+    Title = "Load Config",
+    Icon = "upload",
+    Callback = function()
+        WindUI:LoadConfig()
+        WindUI:Notify({ Title = "Config", Content = "Configuration loaded!", Duration = 2 })
+    end
+})
+
+-- ====================
+-- FOOTER CUSTOM
+-- ====================
+ConfigTab:Paragraph({
+    Title = "Created with ❤️ by ihsanamiruddinn",
+    Desc = "github.com/ihsanamiruddinn",
+    Image = "github",
+    ImageSize = 20,
+    Color = "Grey",
+    Buttons = {
+        {
+            Title = "Copy Link",
+            Icon = "copy",
+            Variant = "Tertiary",
+            Callback = function()
+                setclipboard("https://github.com/ihsanamiruddinn")
+                WindUI:Notify({
+                    Title = "Copied!",
+                    Content = "GitHub link copied to clipboard",
+                    Duration = 2
+                })
+            end
+        }
+    }
 })
