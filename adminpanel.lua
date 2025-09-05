@@ -33,7 +33,22 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 160,
 })
 
-pcall(function() if Window.Mount then Window:Mount() end end)
+pcall(function() if Window.Mount then Window:Mount()
+
+local stroke = Window:GetMain():FindFirstChildWhichIsA("UIStroke", true)
+
+Window.OnMinimize:Connect(function()
+    if stroke then
+        stroke.Color = Color3.fromRGB(57, 255, 20) -- ijo neon
+    end
+end)
+
+Window.OnRestore:Connect(function()
+    if stroke then
+        stroke.Color = Color3.fromRGB(0, 200, 0) -- ijo biasa
+    end
+end)
+ end end)
 
 Window:Tag({ Title = "Admin v2.0", Color = Color3.fromHex("#30ff6a") })
 local TimeTag = Window:Tag({
