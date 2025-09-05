@@ -10,7 +10,7 @@ local Window = WindUI:CreateWindow({
     Icon = "geist:window",
     Author = "github.com/ihsanamiruddinn",
     Theme = "Dark",
-    Size = UDim2.fromOffset(420, 320),
+    Size = UDim2.fromOffset(450, 340),
     Acrylic = true,
     SideBarWidth = 200
 })
@@ -47,17 +47,21 @@ AdminTab:Button({ Title = "Teleport", Icon = "map-pin", Callback = function() Wi
 AdminTab:Input({ Title = "Goto Part", Placeholder = "Enter part name", Callback = function(txt) print("Goto Part:", txt) end })
 AdminTab:Button({ Title = "Goto Part", Icon = "box", Callback = function() WindUI:Notify({ Title = "Goto Part", Content = "Executed (placeholder)", Duration = 2 }) end })
 
-
 -- ========== EXECUTOR TAB ==========
 local ExecTab = Features:Tab({ Title = "Executor", Icon = "terminal" })
-local execCode = ""
-ExecTab:Input({ Title = "Code Input", Placeholder = "Enter script here", Callback = function(txt) execCode = txt end })
-ExecTab:Button({
-    Title = "Execute",
-    Icon = "play",
-    Variant = "Primary",
-    Callback = function()
-        WindUI:Notify({ Title = "Executor", Content = "Executed: "..(execCode ~= "" and execCode or "Empty"), Duration = 3 })
+ExecTab:Input({
+    Title = "Code Input",
+    Placeholder = "Enter script here, press Enter to run",
+    Callback = function(txt)
+        if txt ~= "" then
+            WindUI:Notify({
+                Title = "Executor",
+                Content = "Executed: "..txt,
+                Duration = 3
+            })
+            print("Executed code:", txt)
+            -- Kalau mau beneran: loadstring(txt)()
+        end
     end
 })
 
@@ -120,7 +124,11 @@ AppTab:Toggle({
 --------------------------------------------------
 local Utils = Window:Section({ Title = "Utilities", Opened = true })
 local ConfigTab = Utils:Tab({ Title = "Configuration", Icon = "settings" })
-ConfigTab:Paragraph({ Title = "Configuration Manager", Desc = "Save and load settings" })
+
+ConfigTab:Paragraph({
+    Title = "Configuration Manager",
+    Desc = "Save and load settings"
+})
 
 local ConfigManager = Window.ConfigManager
 local configFile, configName = nil, "default"
@@ -128,7 +136,11 @@ local configFile, configName = nil, "default"
 if ConfigManager then
     ConfigManager:Init(Window)
 
-    ConfigTab:Input({ Title = "Config Name", Value = configName, Callback = function(v) configName = v end })
+    ConfigTab:Input({
+        Title = "Config Name",
+        Value = configName,
+        Callback = function(v) configName = v end
+    })
 
     ConfigTab:Button({
         Title = "Save Config",
@@ -138,7 +150,11 @@ if ConfigManager then
             configFile = ConfigManager:CreateConfig(configName)
             configFile:Set("lastSave", os.date("%Y-%m-%d %H:%M:%S"))
             configFile:Save()
-            WindUI:Notify({ Title = "Config", Content = "Saved as "..configName, Duration = 3 })
+            WindUI:Notify({
+                Title = "Config",
+                Content = "Saved as "..configName,
+                Duration = 3
+            })
         end
     })
 
@@ -148,7 +164,11 @@ if ConfigManager then
         Callback = function()
             configFile = ConfigManager:CreateConfig(configName)
             local loaded = configFile:Load()
-            WindUI:Notify({ Title = "Config", Content = loaded and "Loaded "..configName or "Failed to load", Duration = 3 })
+            WindUI:Notify({
+                Title = "Config",
+                Content = loaded and "Loaded "..configName or "Failed to load",
+                Duration = 3
+            })
         end
     })
 end
