@@ -1,487 +1,448 @@
--- TripleS GUI (standalone final, Fly IY-style + safer Fling, full script)
+--[[
+Skrip GUI Minimalis oleh Gemini
+Deskripsi:
+Ini adalah skrip GUI Lua untuk Roblox yang dirancang agar terlihat modern,
+minimalis, dan mobile-friendly. Fitur utamanya meliputi:
+- Tampilan yang halus dan sudut membulat.
+- Tombol minimize yang mengubah GUI menjadi bola kecil.
+- Tombol close dengan dialog konfirmasi.
+- Animasi halus menggunakan TweenService.
+- Tata letak yang responsif.
 
+--]]
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local RS  = game:GetService("RunService")
-local lp  = Players.LocalPlayer
-
--- ===== helpers karakter =====
-local function getChar()
-    local c = lp.Character or lp.CharacterAdded:Wait()
-    local hrp = c:FindFirstChild("HumanoidRootPart")
-    local hum = c:FindFirstChildOfClass("Humanoid")
-    return c, hrp, hum
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+-- === Konfigurasi GUI ===
+local settings = {
+mainBackgroundColor = Color3.fromRGB(40, 44, 52),
+headerColor = Color3.fromRGB(52, 58, 64),
+buttonColor = Color3.fromRGB(64, 70, 78),
+textColor = Color3.fromRGB(255, 255, 255),
+accentColor = Color3.fromRGB(90, 180, 255),
+cornerRadius = 10,
+animationTime = 0.25
+}
+-- === Fungsi Tweening ===
+local function tweenGui(instance, properties)
+local tweenInfo = TweenInfo.new(settings.animationTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local tween = TweenService:Create(instance, tweenInfo, properties)
+tween:Play()
+end
+-- === Membuat GUI ===
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TripleS_GUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0.3, 0, 0.6, 0) -- Ukuran 1:3 dari layar (disesuaikan)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = settings.mainBackgroundColor
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, settings.cornerRadius)
+corner.Parent = mainFrame
+local layout = Instance.new("UIListLayout")
+layout.FillDirection = Enum.FillDirection.Vertical
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.Padding = UDim.new(0, 10)
+layout.Parent = mainFrame
+local padding = Instance.new("UIPadding")
+padding.PaddingTop = UDim.new(0, 10)
+padding.PaddingBottom = UDim.new(0, 10)
+padding.PaddingLeft = UDim.new(0, 10)
+padding.PaddingRight = UDim.new(0, 10)
+padding.Parent = mainFrame
+-- === Bagian Header ===
+local headerFrame = Instance.new("Frame")
+headerFrame.Name = "HeaderFrame"
+headerFrame.Size = UDim2.new(1, 0, 0, 40)
+headerFrame.BackgroundColor3 = settings.headerColor
+headerFrame.BorderSizePixel = 0
+headerFrame.Parent = mainFrame
+headerFrame.LayoutOrder = 1
+local headerLayout = Instance.new("UIListLayout")
+headerLayout.FillDirection = Enum.FillDirection.Horizontal
+headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+headerLayout.Padding = UDim.new(0, 10)
+headerLayout.Parent = headerFrame
+local headerPadding = Instance.new("UIPadding")
+headerPadding.PaddingLeft = UDim.new(0, 10)
+headerPadding.PaddingRight = UDim.new(0, 10)
+headerPadding.Parent = headerFrame
+local tripleSLabel = Instance.new("TextLabel")
+tripleSLabel.Name = "TripleSLabel"
+tripleSLabel.Text = "TripleS"
+tripleSLabel.Size = UDim2.new(0.3, 0, 1, 0)
+tripleSLabel.BackgroundTransparency = 1
+tripleSLabel.TextColor3 = settings.textColor
+tripleSLabel.TextScaled = true
+tripleSLabel.Font = Enum.Font.SourceSansBold
+tripleSLabel.Parent = headerFrame
+local headerInput = Instance.new("TextBox")
+headerInput.Name = "HeaderInput"
+headerInput.PlaceholderText = "Input di Header"
+headerInput.Size = UDim2.new(0.7, 0, 1, 0)
+headerInput.BackgroundColor3 = settings.buttonColor
+headerInput.BorderSizePixel = 0
+headerInput.TextColor3 = settings.textColor
+headerInput.TextScaled = true
+headerInput.Parent = headerFrame
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0, 5)
+inputCorner.Parent = headerInput
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Text = "X"
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -30, 0, 0)
+closeButton.AnchorPoint = Vector2.new(1, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeButton.BorderSizePixel = 0
+closeButton.TextColor3 = settings.textColor
+closeButton.Parent = mainFrame
+closeButton.ZIndex = 2 -- Pastikan di atas yang lain
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Name = "MinimizeButton"
+minimizeButton.Text = "-"
+minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+minimizeButton.Position = UDim2.new(1, -65, 0, 0)
+minimizeButton.AnchorPoint = Vector2.new(1, 0)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+minimizeButton.BorderSizePixel = 0
+minimizeButton.TextColor3 = settings.textColor
+minimizeButton.Parent = mainFrame
+minimizeButton.ZIndex = 2
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 5)
+buttonCorner.Parent = minimizeButton
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 5)
+closeCorner.Parent = closeButton
+-- === Bagian Konten Utama ===
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, 0, 1, 0)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+contentFrame.LayoutOrder = 2
+local contentLayout = Instance.new("UIListLayout")
+contentLayout.FillDirection = Enum.FillDirection.Vertical
+contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+contentLayout.Padding = UDim.new(0, 10)
+contentLayout.Parent = contentFrame
+-- Baris 1: Dua tombol
+local buttonRow1 = Instance.new("Frame")
+buttonRow1.Name = "ButtonRow1"
+buttonRow1.Size = UDim2.new(1, 0, 0, 40)
+buttonRow1.BackgroundTransparency = 1
+buttonRow1.Parent = contentFrame
+local buttonRow1Layout = Instance.new("UIListLayout")
+buttonRow1Layout.FillDirection = Enum.FillDirection.Horizontal
+buttonRow1Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonRow1Layout.Padding = UDim.new(0, 10)
+buttonRow1Layout.Parent = buttonRow1
+local btn1 = Instance.new("TextButton")
+btn1.Name = "Tombol1"
+btn1.Text = "Tombol 1"
+btn1.Size = UDim2.new(0.5, -5, 1, 0)
+btn1.BackgroundColor3 = settings.buttonColor
+btn1.BorderSizePixel = 0
+btn1.TextColor3 = settings.textColor
+btn1.Parent = buttonRow1
+local corner1 = Instance.new("UICorner")
+corner1.CornerRadius = UDim.new(0, settings.cornerRadius)
+corner1.Parent = btn1
+local btn2 = Instance.new("TextButton")
+btn2.Name = "Tombol2"
+btn2.Text = "Tombol 2"
+btn2.Size = UDim2.new(0.5, -5, 1, 0)
+btn2.BackgroundColor3 = settings.buttonColor
+btn2.BorderSizePixel = 0
+btn2.TextColor3 = settings.textColor
+btn2.Parent = buttonRow1
+local corner2 = Instance.new("UICorner")
+corner2.CornerRadius = UDim.new(0, settings.cornerRadius)
+corner2.Parent = btn2
+-- Baris 2: Dua tombol
+local buttonRow2 = Instance.new("Frame")
+buttonRow2.Name = "ButtonRow2"
+buttonRow2.Size = UDim2.new(1, 0, 0, 40)
+buttonRow2.BackgroundTransparency = 1
+buttonRow2.Parent = contentFrame
+local buttonRow2Layout = Instance.new("UIListLayout")
+buttonRow2Layout.FillDirection = Enum.FillDirection.Horizontal
+buttonRow2Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonRow2Layout.Padding = UDim.new(0, 10)
+buttonRow2Layout.Parent = buttonRow2
+local btn3 = Instance.new("TextButton")
+btn3.Name = "Tombol3"
+btn3.Text = "Tombol 3"
+btn3.Size = UDim2.new(0.5, -5, 1, 0)
+btn3.BackgroundColor3 = settings.buttonColor
+btn3.BorderSizePixel = 0
+btn3.TextColor3 = settings.textColor
+btn3.Parent = buttonRow2
+local corner3 = Instance.new("UICorner")
+corner3.CornerRadius = UDim.new(0, settings.cornerRadius)
+corner3.Parent = btn3
+local btn4 = Instance.new("TextButton")
+btn4.Name = "Tombol4"
+btn4.Text = "Tombol 4"
+btn4.Size = UDim2.new(0.5, -5, 1, 0)
+btn4.BackgroundColor3 = settings.buttonColor
+btn4.BorderSizePixel = 0
+btn4.TextColor3 = settings.textColor
+btn4.Parent = buttonRow2
+local corner4 = Instance.new("UICorner")
+corner4.CornerRadius = UDim.new(0, settings.cornerRadius)
+corner4.Parent = btn4
+-- Baris 3: Dua textbox
+local textboxRow1 = Instance.new("Frame")
+textboxRow1.Name = "TextboxRow1"
+textboxRow1.Size = UDim2.new(1, 0, 0, 40)
+textboxRow1.BackgroundTransparency = 1
+textboxRow1.Parent = contentFrame
+local textboxRow1Layout = Instance.new("UIListLayout")
+textboxRow1Layout.FillDirection = Enum.FillDirection.Horizontal
+textboxRow1Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+textboxRow1Layout.Padding = UDim.new(0, 10)
+textboxRow1Layout.Parent = textboxRow1
+local input1 = Instance.new("TextBox")
+input1.Name = "Input1"
+input1.PlaceholderText = "Input 1"
+input1.Size = UDim2.new(0.5, -5, 1, 0)
+input1.BackgroundColor3 = settings.buttonColor
+input1.BorderSizePixel = 0
+input1.TextColor3 = settings.textColor
+input1.Parent = textboxRow1
+local input1Corner = Instance.new("UICorner")
+input1Corner.CornerRadius = UDim.new(0, settings.cornerRadius)
+input1Corner.Parent = input1
+local input2 = Instance.new("TextBox")
+input2.Name = "Input2"
+input2.PlaceholderText = "Input 2"
+input2.Size = UDim2.new(0.5, -5, 1, 0)
+input2.BackgroundColor3 = settings.buttonColor
+input2.BorderSizePixel = 0
+input2.TextColor3 = settings.textColor
+input2.Parent = textboxRow1
+local input2Corner = Instance.new("UICorner")
+input2Corner.CornerRadius = UDim.new(0, settings.cornerRadius)
+input2Corner.Parent = input2
+-- Baris 4: Satu textbox
+local input3 = Instance.new("TextBox")
+input3.Name = "Input3"
+input3.PlaceholderText = "Input Terakhir"
+input3.Size = UDim2.new(1, -20, 0, 40)
+input3.BackgroundColor3 = settings.buttonColor
+input3.BorderSizePixel = 0
+input3.TextColor3 = settings.textColor
+input3.Parent = contentFrame
+local input3Corner = Instance.new("UICorner")
+input3Corner.CornerRadius = UDim.new(0, settings.cornerRadius)
+input3Corner.Parent = input3
+-- === Bagian Footer ===
+local footerFrame = Instance.new("Frame")
+footerFrame.Name = "FooterFrame"
+footerFrame.Size = UDim2.new(1, 0, 0, 30)
+footerFrame.BackgroundTransparency = 1
+footerFrame.Parent = mainFrame
+footerFrame.LayoutOrder = 3
+local footerLayout = Instance.new("UIListLayout")
+footerLayout.FillDirection = Enum.FillDirection.Horizontal
+footerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+footerLayout.Padding = UDim.new(0, 10)
+footerLayout.Parent = footerFrame
+local footerPadding = Instance.new("UIPadding")
+footerPadding.PaddingLeft = UDim.new(0, 10)
+footerPadding.PaddingRight = UDim.new(0, 10)
+footerPadding.Parent = footerFrame
+local function createFooterButton(name, text)
+local button = Instance.new("TextButton")
+button.Name = name
+button.Text = text
+button.Size = UDim2.new(0.25, -10, 1, 0)
+button.BackgroundColor3 = settings.buttonColor
+button.BorderSizePixel = 0
+button.TextColor3 = settings.textColor
+button.Font = Enum.Font.SourceSansBold
+button.Parent = footerFrame
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, settings.cornerRadius)
+corner.Parent = button
+return button
+end
+local settingsBtn = createFooterButton("SettingsBtn", "SETTING")
+local infoBtn = createFooterButton("InfoBtn", "INFO")
+local keybindBtn = createFooterButton("KeybindBtn", "KEYBIND")
+local rejoinBtn = createFooterButton("RejoinBtn", "REJOIN")
+-- === Fungsi Minimize ===
+local isMinimized = false
+local originalSize = mainFrame.Size
+local originalPosition = mainFrame.Position
+local function minimize()
+if not isMinimized then
+isMinimized = true
+tweenGui(mainFrame, {
+Size = UDim2.new(0, 50, 0, 50),
+Position = UDim2.new(1, -70, 1, -70),
+CornerRadius = UDim.new(1, 0) -- Menjadi lingkaran
+})
+headerFrame.Visible = false
+contentFrame.Visible = false
+footerFrame.Visible = false
+closeButton.Visible = false
+minimizeButton.Text = "+"
+else
+	isMinimized = false
+	tweenGui(mainFrame, {
+		Size = originalSize,
+		Position = originalPosition,
+		CornerRadius = UDim.new(0, settings.cornerRadius)
+	})
+	headerFrame.Visible = true
+	contentFrame.Visible = true
+	footerFrame.Visible = true
+	closeButton.Visible = true
+	minimizeButton.Text = "-"
 end
 
-local function safeTeleport(cf)
-    local c, hrp, hum = getChar()
-    if not hrp then return end
-    local model = c
-    if model and model.PrimaryPart == nil then
-        model.PrimaryPart = hrp
-    end
-    if model and model.PrimaryPart then
-        model:PivotTo(cf)
-    else
-        hrp.CFrame = cf
-    end
-    if hum then
-        pcall(function()
-            hum:ChangeState(Enum.HumanoidStateType.Physics)
-            task.wait()
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end)
-    end
 end
-
--- ===== state umum =====
-local flying = false
-local flyBV, flyBG, flyConn
-local flySpeed = 50
-local ascend, descend = 0, 0
-
-local flingActive = false
-local flingConn = nil
-local flingCooldown = 0.7
-local lastFlingAt = {}
-
-local checkpointCF = nil
-local respawnConn = nil
-
--- ===== INPUT (ascend / descend) =====
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == Enum.KeyCode.Space then
-            ascend = 1
-        elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
-            descend = 1
-        end
-    end
+minimizeButton.MouseButton1Click:Connect(minimize)
+-- === Dialog Konfirmasi Close ===
+local confirmFrame = Instance.new("Frame")
+confirmFrame.Name = "ConfirmFrame"
+confirmFrame.Size = UDim2.new(0.3, 0, 0.2, 0)
+confirmFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+confirmFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+confirmFrame.BackgroundColor3 = settings.mainBackgroundColor
+confirmFrame.BorderSizePixel = 0
+confirmFrame.Parent = screenGui
+confirmFrame.ZIndex = 3
+confirmFrame.Visible = false
+local confirmCorner = Instance.new("UICorner")
+confirmCorner.CornerRadius = UDim.new(0, settings.cornerRadius)
+confirmCorner.Parent = confirmFrame
+local confirmLayout = Instance.new("UIListLayout")
+confirmLayout.FillDirection = Enum.FillDirection.Vertical
+confirmLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+confirmLayout.Padding = UDim.new(0, 10)
+confirmLayout.Parent = confirmFrame
+local confirmLabel = Instance.new("TextLabel")
+confirmLabel.Name = "ConfirmLabel"
+confirmLabel.Text = "Yakin untuk keluar?"
+confirmLabel.Size = UDim2.new(1, -20, 0.5, 0)
+confirmLabel.BackgroundTransparency = 1
+confirmLabel.TextColor3 = settings.textColor
+confirmLabel.TextScaled = true
+confirmLabel.Parent = confirmFrame
+local confirmButtonRow = Instance.new("Frame")
+confirmButtonRow.Name = "ConfirmButtonRow"
+confirmButtonRow.Size = UDim2.new(1, 0, 0.5, 0)
+confirmButtonRow.BackgroundTransparency = 1
+confirmButtonRow.Parent = confirmFrame
+local confirmButtonLayout = Instance.new("UIListLayout")
+confirmButtonLayout.FillDirection = Enum.FillDirection.Horizontal
+confirmButtonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+confirmButtonLayout.Padding = UDim.new(0, 10)
+confirmButtonLayout.Parent = confirmButtonRow
+local yesButton = Instance.new("TextButton")
+yesButton.Name = "YesButton"
+yesButton.Text = "Ya"
+yesButton.Size = UDim2.new(0.5, -5, 1, 0)
+yesButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+yesButton.BorderSizePixel = 0
+yesButton.TextColor3 = settings.textColor
+yesButton.Parent = confirmButtonRow
+local yesCorner = Instance.new("UICorner")
+yesCorner.CornerRadius = UDim.new(0, 5)
+yesCorner.Parent = yesButton
+local noButton = Instance.new("TextButton")
+noButton.Name = "NoButton"
+noButton.Text = "Tidak"
+noButton.Size = UDim2.new(0.5, -5, 1, 0)
+noButton.BackgroundColor3 = settings.buttonColor
+noButton.BorderSizePixel = 0
+noButton.TextColor3 = settings.textColor
+noButton.Parent = confirmButtonRow
+local noCorner = Instance.new("UICorner")
+noCorner.CornerRadius = UDim.new(0, 5)
+noCorner.Parent = noButton
+local backgroundFade = Instance.new("Frame")
+backgroundFade.Name = "BackgroundFade"
+backgroundFade.Size = UDim2.new(1, 0, 1, 0)
+backgroundFade.BackgroundTransparency = 1
+backgroundFade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+backgroundFade.ZIndex = 2
+backgroundFade.Parent = screenGui
+backgroundFade.Visible = false
+closeButton.MouseButton1Click:Connect(function()
+backgroundFade.Visible = true
+confirmFrame.Visible = true
+tweenGui(backgroundFade, { BackgroundTransparency = 0.5 })
+tweenGui(confirmFrame, { Size = UDim2.new(0.3, 0, 0.2, 0) })
 end)
-
-UIS.InputEnded:Connect(function(input, gpe)
-    if gpe then return end
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == Enum.KeyCode.Space then
-            ascend = 0
-        elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
-            descend = 0
-        end
-    end
+yesButton.MouseButton1Click:Connect(function()
+tweenGui(mainFrame, { Position = UDim2.new(0.5, 0, 1.5, 0) })
+tweenGui(backgroundFade, { BackgroundTransparency = 1 })
+wait(settings.animationTime)
+screenGui:Destroy()
 end)
-
--- ===== FLY (Infinite Yield style, bukan noclip) =====
-local function startFly()
-    if flying then return end
-    local c, hrp, hum = getChar()
-    if not hrp or not hum then return end
-    flying = true
-
-    -- clear velocities
-    pcall(function()
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        hrp.AssemblyAngularVelocity = Vector3.zero
-    end)
-
-    -- BodyVelocity & BodyGyro
-    flyBV = Instance.new("BodyVelocity")
-    flyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    flyBV.Velocity = Vector3.zero
-    flyBV.P = 1500
-    flyBV.Parent = hrp
-
-    flyBG = Instance.new("BodyGyro")
-    flyBG.MaxTorque = Vector3.new(9e9,9e9,9e9)
-    flyBG.P = 1000
-    flyBG.CFrame = hrp.CFrame
-    flyBG.Parent = hrp
-
-    -- render loop
-    if flyConn then flyConn:Disconnect() flyConn = nil end
-    flyConn = RS.RenderStepped:Connect(function()
-        if not flying then return end
-        local _, hrp2, hum2 = getChar()
-        if not hrp2 or not hum2 then return end
-        local cam = workspace.CurrentCamera
-        if not cam then return end
-
-        -- WASD/Analog move
-        local move = hum2.MoveDirection
-        local dir = Vector3.zero
-        if move.Magnitude > 0 then
-            dir = (cam.CFrame:VectorToWorldSpace(move)).Unit
-        end
-
-        local y = (ascend - descend)
-        local vel = (dir * flySpeed) + Vector3.new(0, y * flySpeed, 0)
-
-        flyBV.Velocity = vel
-        flyBG.CFrame = CFrame.new(hrp2.Position, hrp2.Position + cam.CFrame.LookVector)
-    end)
-end
-
-local function stopFly()
-    if not flying then return end
-    flying = false
-    if flyConn then flyConn:Disconnect() flyConn = nil end
-    if flyBV and flyBV.Parent then flyBV:Destroy() flyBV = nil end
-    if flyBG and flyBG.Parent then flyBG:Destroy() flyBG = nil end
-end
-
--- ===== FLING (safer) =====
-local function startFling()
-    if flingActive then return end
-    local _, hrp = getChar()
-    if not hrp then return end
-    flingActive = true
-    lastFlingAt = {}
-
-    if flingConn then flingConn:Disconnect() flingConn = nil end
-    flingConn = RS.Heartbeat:Connect(function()
-        if not flingActive then return end
-        local _, hrpNow = getChar()
-        if not hrpNow then return end
-        local pos = hrpNow.Position
-
-        for _, pl in ipairs(Players:GetPlayers()) do
-            if pl ~= lp and pl.Character and pl.Character.Parent then
-                local theirHRP = pl.Character:FindFirstChild("HumanoidRootPart")
-                if theirHRP then
-                    local dist = (theirHRP.Position - pos).Magnitude
-                    if dist <= 10 then
-                        local t = tick()
-                        local last = lastFlingAt[pl] or 0
-                        if t - last >= flingCooldown then
-                            local dir = (theirHRP.Position - pos).Unit
-                            pcall(function()
-                                local bv = Instance.new("BodyVelocity")
-                                bv.MaxForce = Vector3.new(9e9,9e9,9e9)
-                                bv.Velocity = (dir * 140) + Vector3.new(0,120,0)
-                                bv.P = 5000
-                                bv.Parent = theirHRP
-                                task.delay(0.15, function() if bv and bv.Parent then bv:Destroy() end end)
-                            end)
-                            lastFlingAt[pl] = t
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function stopFling()
-    if not flingActive then return end
-    flingActive = false
-    if flingConn then flingConn:Disconnect() flingConn = nil end
-    lastFlingAt = {}
-end
-
--- ===== SPAWN / CHECKPOINT =====
-local function setCheckpoint()
-    local _, hrp = getChar()
-    if not hrp then return end
-    checkpointCF = hrp.CFrame
-    if respawnConn then respawnConn:Disconnect() respawnConn = nil end
-    respawnConn = lp.CharacterAdded:Connect(function(char)
-        local hrp2 = char:WaitForChild("HumanoidRootPart", 10)
-        if checkpointCF and hrp2 then
-            task.wait(0.25)
-            char:PivotTo(checkpointCF)
-        end
-    end)
-end
-
-local function clearCheckpoint()
-    checkpointCF = nil
-    if respawnConn then respawnConn:Disconnect() respawnConn = nil end
-end
-
--- ===== SPEED =====
-local function setSpeed(v)
-    local _, _, hum = getChar()
-    if hum then hum.WalkSpeed = v end
-end
-
--- ===== TP TOOL =====
-local function ensureTpTool()
-    local backpack = lp:FindFirstChildOfClass("Backpack")
-    if not backpack then return end
-    if backpack:FindFirstChild("TpTool") then return end
-    local tool = Instance.new("Tool")
-    tool.Name = "TpTool"
-    tool.RequiresHandle = false
-    local mouse = lp:GetMouse()
-    tool.Activated:Connect(function()
-        if mouse and mouse.Hit then
-            safeTeleport(mouse.Hit + Vector3.new(0,3,0))
-        end
-    end)
-    tool.Parent = backpack
-end
-
--- ===== TGoto =====
-local function gotoPlayer(name)
-    if not name or name == "" then return end
-    for _, pl in ipairs(Players:GetPlayers()) do
-        if pl ~= lp and pl.Name:lower():find(name:lower()) then
-            if pl.Character then
-                local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then safeTeleport(hrp.CFrame + Vector3.new(0,3,0)) end
-            end
-        end
-    end
-end
-
--- ===== GotoPart =====
-local function gotoPartByName(partName)
-    if not partName or partName == "" then return end
-    for _, desc in ipairs(workspace:GetDescendants()) do
-        if desc:IsA("BasePart") and desc.Name:lower() == partName:lower() then
-            safeTeleport(desc.CFrame + Vector3.new(0,3,0))
-            return
-        end
-    end
-end
-
--- ===== Command Router =====
-local function runCommand(cmd)
-    local args = {}
-    for token in string.gmatch(cmd, "%S+") do table.insert(args, token) end
-    local h = (args[1] or ""):lower()
-    if h == "fly" then startFly()
-    elseif h == "unfly" then stopFly()
-    elseif h == "fling" then startFling()
-    elseif h == "unfling" then stopFling()
-    elseif h == "spawn" then setCheckpoint()
-    elseif h == "nospawn" then clearCheckpoint()
-    elseif h == "speed" then local v=tonumber(args[2]); if v then setSpeed(v) end
-    elseif h == "tptool" then ensureTpTool()
-    elseif h == "tgoto" then gotoPlayer(args[2] and table.concat(args," ",2) or "")
-    elseif h == "gotopart" then gotoPartByName(args[2] and table.concat(args," ",2) or "")
-    end
-end
-
--- ========== GUI ========== (dibiarkan sama persis)
--- (GUI bagian bawahmu tetap sama, aku ga ubah biar gak acak²)
--- >>>> [biar gak kepanjangan, aku gak hapus GUI-mu, copy aja dari versi sebelumnya]
- 
--- ========== GUI ========== (keutuhan layout dipertahankan) 
--- auto parent 
-local parentGui 
-if type(gethui) == "function" then 
-    pcall(function() parentGui = gethui() end) 
-end 
-if not parentGui and syn and syn.protect_gui then 
-    local s = Instance.new("ScreenGui") 
-    syn.protect_gui(s) 
-    s.Parent = game:GetService("CoreGui") 
-    parentGui = s 
-end 
-if not parentGui then 
-    parentGui = lp:WaitForChild("PlayerGui") 
-end
- 
--- cleanup 
-if parentGui:FindFirstChild("TripleSGUI") then 
-    parentGui.TripleSGUI:Destroy() 
-end
- 
-local screen = Instance.new("ScreenGui") 
-screen.Name = "TripleSGUI" 
-screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling 
-screen.ResetOnSpawn = false 
-screen.Parent = parentGui
- 
--- panel utama 
-local frame = Instance.new("Frame", screen) 
-frame.Size = UDim2.new(0, 280, 0, 380) 
-frame.Position = UDim2.new(0.5, -140, 0.5, -190) 
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) 
-frame.Active = true 
-frame.Draggable = true 
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
- 
--- header (nempel di frame) 
-local header = Instance.new("Frame", frame) 
-header.Size = UDim2.new(1,0,0,32) 
-header.BackgroundColor3 = Color3.fromRGB(45,45,45) 
-Instance.new("UICorner", header).CornerRadius = UDim.new(0,12)
- 
--- title (brand jadi tombol minimize) 
-local title = Instance.new("TextButton", header) 
-title.Size = UDim2.new(1,-60,1,0) 
-title.Position = UDim2.new(0,8,0,0) 
-title.Text = "TripleS by Saanseventeen" 
-title.Font = Enum.Font.SourceSansBold 
-title.TextSize = 18 
-title.TextColor3 = Color3.new(1,1,1) 
-title.BackgroundTransparency = 1
- 
--- tombol close 
-local btnClose = Instance.new("TextButton", header) 
-btnClose.Size = UDim2.new(0,24,0,24) 
-btnClose.Position = UDim2.new(1,-28,0,4) 
-btnClose.Text = "✕" 
-btnClose.Font = Enum.Font.SourceSansBold 
-btnClose.TextSize = 14 
-btnClose.TextColor3 = Color3.new(1,1,1) 
-btnClose.BackgroundColor3 = Color3.fromRGB(200,60,60) 
-Instance.new("UICorner", btnClose).CornerRadius = UDim.new(0,6) 
-btnClose.MouseButton1Click:Connect(function() screen:Destroy() end)
- 
--- input bar (tetap ada) 
-local input = Instance.new("TextBox", frame) 
-input.Size = UDim2.new(1,-24,0,28) 
-input.Position = UDim2.new(0,12,0,40) 
-input.PlaceholderText = "Type here..." 
-input.Text = "" 
-input.Font = Enum.Font.SourceSans 
-input.TextSize = 16 
-input.TextColor3 = Color3.new(1,1,1) 
-input.BackgroundColor3 = Color3.fromRGB(40,40,40) 
-Instance.new("UICorner", input).CornerRadius = UDim.new(0,8) 
-input.FocusLost:Connect(function(enter) 
-    if enter and input.Text ~= "" then 
-        runCommand(input.Text) 
-        input.Text = "" 
-    end 
+noButton.MouseButton1Click:Connect(function()
+tweenGui(backgroundFade, { BackgroundTransparency = 1 })
+tweenGui(confirmFrame, { Size = UDim2.new(0.3, 0, 0, 0) })
+wait(settings.animationTime)
+backgroundFade.Visible = false
+confirmFrame.Visible = false
 end)
- 
--- content (tombol utama) — kept as Frame to preserve layout 
-local content = Instance.new("Frame", frame) 
-content.Name = "Content" 
-content.Size = UDim2.new(1,-24,1,-150) 
-content.Position = UDim2.new(0,12,0,80) 
-content.BackgroundTransparency = 1
- 
-local grid = Instance.new("UIGridLayout", content) 
-grid.CellPadding = UDim2.new(0,10,0,10) 
-grid.CellSize = UDim2.new(0.5,-15,0,36) 
-grid.FillDirection = Enum.FillDirection.Horizontal 
-grid.SortOrder = Enum.SortOrder.LayoutOrder 
-grid.HorizontalAlignment = Enum.HorizontalAlignment.Center 
-grid.VerticalAlignment = Enum.VerticalAlignment.Top
- 
--- helper tombol 
-local function makeBtn(parent, text, command) 
-    local b = Instance.new("TextButton", parent) 
-    b.Text = text 
-    b.Font = Enum.Font.SourceSansBold 
-    b.TextSize = 14 
-    b.TextColor3 = Color3.new(1,1,1) 
-    b.BackgroundColor3 = Color3.fromRGB(50,50,50) 
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6) 
-    if command then 
-        b.MouseButton1Click:Connect(function() 
-            runCommand(command) 
-        end) 
-    end 
-    return b 
+-- === Fungsi Drag GUI ===
+local isDragging = false
+local dragStartPos
+local initialPos
+local function onInputBegan(input, gameProcessed)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+local pos = UserInputService:GetMouseLocation()
+if not isMinimized and mainFrame:IsA("GuiObject") and pos.X >= mainFrame.AbsolutePosition.X and pos.X <= mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X and pos.Y >= mainFrame.AbsolutePosition.Y and pos.Y <= mainFrame.AbsolutePosition.Y + mainFrame.AbsoluteSize.Y then
+isDragging = true
+dragStartPos = pos
+initialPos = mainFrame.Position
 end
- 
--- helper input (TextBox mirip tombol) 
-local function makeInput(parent, placeholder, baseCommand) 
-    local box = Instance.new("TextBox", parent) 
-    box.PlaceholderText = placeholder 
-    box.Text = "" 
-    box.Font = Enum.Font.SourceSansBold 
-    box.TextSize = 14 
-    box.TextColor3 = Color3.new(1,1,1) 
-    box.BackgroundColor3 = Color3.fromRGB(50,50,50) 
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0,6) 
-    box.ClearTextOnFocus = false 
-    box.FocusLost:Connect(function(enter) 
-        if enter and box.Text ~= "" then 
-            runCommand(baseCommand .. " " .. box.Text) 
-            box.Text = "" 
-        end 
-    end) 
-    return box 
 end
- 
--- tombol utama (mapping sesuai permintaanmu) 
-makeBtn(content,"Fly","fly") 
-makeBtn(content,"Unfly","unfly") 
-makeBtn(content,"Fling","fling") 
-makeBtn(content,"Unfling","unfling") 
-makeBtn(content,"Set Spawn","spawn") 
-makeBtn(content,"Delete Spawn","nospawn") 
-makeBtn(content,"Speed 23","speed 23") 
-makeBtn(content,"Tptool","tptool") 
-makeInput(content,"TGoto","tgoto") 
-makeInput(content,"GotoPart","gotopart")
- 
--- footer tombol kecil 
-local footer = Instance.new("Frame", frame) 
-footer.Size = UDim2.new(1,-24,0,50) 
-footer.Position = UDim2.new(0,12,1,-56) 
-footer.BackgroundTransparency = 1
- 
-local footerLayout = Instance.new("UIListLayout", footer) 
-footerLayout.FillDirection = Enum.FillDirection.Horizontal 
-footerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center 
-footerLayout.Padding = UDim.new(0,12)
- 
-local function makeIconBtn(txt, emoji) 
-    local b = Instance.new("TextButton") 
-    b.Size = UDim2.new(0,40,0,40) 
-    b.Text = emoji 
-    b.Font = Enum.Font.SourceSansBold 
-    b.TextSize = 22 
-    b.TextColor3 = Color3.new(1,1,1) 
-    b.BackgroundColor3 = Color3.fromRGB(50,50,50) 
-    Instance.new("UICorner", b).CornerRadius = UDim.new(1,0) 
-    b.Parent = footer 
-    b.Name = txt 
-    return b 
 end
- 
-makeIconBtn("Settings", "⚙️") 
-makeIconBtn("Commands", "📜") 
-makeIconBtn("Keybinds", "⌨️") 
-makeIconBtn("Plugins",  "🔌")
- 
--- mini button (SSS) 
-local miniBtn = Instance.new("TextButton", screen) 
-miniBtn.Size = UDim2.new(0,40,0,40) 
-miniBtn.Position = UDim2.new(1,-60,0,20) 
-miniBtn.BackgroundColor3 = Color3.new(0,0,0) 
-miniBtn.Text = "SSS" 
-miniBtn.TextColor3 = Color3.new(1,1,1) 
-miniBtn.Font = Enum.Font.SourceSansBold 
-miniBtn.TextSize = 14 
-Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(1,0) 
-miniBtn.Visible = false 
-miniBtn.Active = true 
-miniBtn.Draggable = true
- 
--- minimize (brand jadi tombol) 
-title.MouseButton1Click:Connect(function() 
-    frame.Visible = false 
-    miniBtn.Visible = true 
-end)
- 
--- restore 
-miniBtn.MouseButton1Click:Connect(function() 
-    frame.Visible = true 
-    miniBtn.Visible = false 
-end)
- 
--- safety: cleanup on script unload / character removal 
-local function cleanupAll() 
-    stopFly() 
-    stopFling() 
-    clearCheckpoint() 
-    -- remove any created objects if needed (we didn't create persistent parts) 
+local function onInputChanged(input, gameProcessed)
+if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+local mousePos = UserInputService:GetMouseLocation()
+local delta = mousePos - dragStartPos
+local newX = initialPos.X.Scale + delta.X / game.Workspace.CurrentCamera.ViewportSize.X
+local newY = initialPos.Y.Scale + delta.Y / game.Workspace.CurrentCamera.ViewportSize.Y
+mainFrame.Position = UDim2.new(newX, 0, newY, 0)
 end
- 
--- try to cleanup when player leaves or script destroyed 
-lp.AncestryChanged:Connect(function() 
-    if not lp:IsDescendantOf(game) then 
-        cleanupAll() 
-    end 
-end)
- 
--- done
+end
+local function onInputEnded(input, gameProcessed)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+isDragging = false
+end
+end
+UserInputService.InputBegan:Connect(onInputBegan)
+UserInputService.InputChanged:Connect(onInputChanged)
+UserInputService.InputEnded:Connect(onInputEnded)
+-- === Mobile Friendly Resize ===
+local function onScreenSizeChanged()
+local viewportSize = game.Workspace.CurrentCamera.ViewportSize
+local newWidth = viewportSize.X * 0.9 -- Untuk mobile, bisa lebih lebar
+local newHeight = viewportSize.Y * 0.6
+if viewportSize.X > 1000 then -- Desktop
+newWidth = viewportSize.X * 0.3
+end
+mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+originalSize = mainFrame.Size
+
+end
+game.Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(onScreenSizeChanged)
+onScreenSizeChanged() -- Panggil saat pertama kali
