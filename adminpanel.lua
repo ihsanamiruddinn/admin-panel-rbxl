@@ -1,57 +1,93 @@
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/TripleS-UI/main/dist/main.lua"))()
 
-local win = WindUI:CreateWindow({
+local Window = WindUI:CreateWindow({
     Title = "TripleS",
+    Author = "by saanseventeen",
     Size = UDim2.fromOffset(360, 300),
-    ConfigFolder = "TripleS-Config",
-    MinimizeKey = Enum.KeyCode.RightControl,
+    Folder = "TripleS_Config",
+    Theme = "Dark",
 })
 
--- Tab Welcome
-local welcomeTab = win:AddTab("Welcome")
-welcomeTab:AddParagraph("by saanseventeen", "Created with: https://github.com/ihsanamiruddinn/TripleS-UI")
+-- Tabs
+local Tabs = {
+    Universal = Window:Section({ Title = "Universal", Opened = true }),
+    Settings  = Window:Section({ Title = "Settings", Opened = true }),
+    Utilities = Window:Section({ Title = "Utilities", Opened = true }),
+    Misc      = Window:Section({ Title = "Misc", Opened = true }),
+}
 
--- Tab Main
-local mainTab = win:AddTab("Main")
-mainTab:AddButton("Auto Farm", function()
-    print("Auto Farm dijalankan!")
-end)
-mainTab:AddButton("ESP", function()
-    print("ESP diaktifkan!")
-end)
-mainTab:AddButton("Teleport", function()
-    print("Teleport aktif!")
-end)
+-- Universal Tab
+local Universal = Tabs.Universal:Tab({ Title = "Features", Icon = "zap" })
+Universal:Button({
+    Title = "Auto Farm",
+    Icon = "cpu",
+    Callback = function()
+        WindUI:Notify({ Title = "Universal", Content = "Auto Farm aktif!" })
+    end
+})
+Universal:Toggle({
+    Title = "God Mode",
+    Value = false,
+    Callback = function(state)
+        WindUI:Notify({ Title = "Universal", Content = "God Mode: "..tostring(state) })
+    end
+})
+Universal:Slider({
+    Title = "WalkSpeed",
+    Value = {Min = 16, Max = 100, Default = 16},
+    Callback = function(value)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
+    end
+})
 
--- Tab Universal
-local universalTab = win:AddTab("Universal")
-universalTab:AddButton("Speed Hack", function()
-    print("Speed Hack aktif!")
-end)
-universalTab:AddButton("Infinite Jump", function()
-    print("Infinite Jump aktif!")
-end)
+-- Settings Tab
+local Settings = Tabs.Settings:Tab({ Title = "Options", Icon = "settings" })
+Settings:Button({
+    Title = "Appearance",
+    Callback = function()
+        WindUI:Notify({ Title = "Settings", Content = "Appearance settings opened" })
+    end
+})
+Settings:Keybind({
+    Title = "UI Toggle",
+    Default = Enum.KeyCode.RightControl,
+    Callback = function()
+        Window:Toggle()
+    end
+})
 
--- Tab Settings
-local settingsTab = win:AddTab("Settings")
-settingsTab:AddButton("Appearance", function()
-    print("Appearance settings")
-end)
-settingsTab:AddButton("Keybind", function()
-    print("Keybind settings")
-end)
+-- Utilities Tab
+local Utils = Tabs.Utilities:Tab({ Title = "Tools", Icon = "wrench" })
+Utils:Button({
+    Title = "Configuration",
+    Callback = function()
+        WindUI:Notify({ Title = "Utilities", Content = "Configuration opened" })
+    end
+})
+Utils:Button({
+    Title = "Plugins",
+    Callback = function()
+        WindUI:Notify({ Title = "Utilities", Content = "Plugins list opened" })
+    end
+})
 
--- Tab Utilities
-local utilitiesTab = win:AddTab("Utilities")
-utilitiesTab:AddButton("Configuration", function()
-    print("Configuration panel")
-end)
-utilitiesTab:AddButton("Plugins", function()
-    print("Plugins panel")
-end)
-
--- Tab Misc
-local miscTab = win:AddTab("Misc")
-miscTab:AddButton("Destroy UI", function()
-    win:Destroy()
-end)
+-- Misc Tab
+local Misc = Tabs.Misc:Tab({ Title = "Extra", Icon = "more-horizontal" })
+Misc:Button({
+    Title = "Rejoin",
+    Callback = function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+    end
+})
+Misc:Button({
+    Title = "Server Hop",
+    Callback = function()
+        WindUI:Notify({ Title = "Misc", Content = "Server Hop jalan" })
+    end
+})
+Misc:Button({
+    Title = "Destroy UI",
+    Callback = function()
+        Window:Destroy()
+    end
+})
