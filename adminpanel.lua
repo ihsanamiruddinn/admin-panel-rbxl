@@ -1,11 +1,8 @@
--- adminpanel.lua - TripleS Admin Panel (rebuilt)
+-- adminpanel.lua - TripleS Admin Panel (fixed Sections)
 -- Author: ihsanamiruddinn (credit in footer)
--- Generated full UI: Admin, Executor, Emotes, Appearance, Configuration, Plugins, Keybinds
--- NOTES:
---  - This script builds the UI using WindUI. Ensure your executor allows game:HttpGet and loadstring.
---  - Some features are placeholders or implemented safely (Speed modifies your Humanoid.WalkSpeed).
---  - Plugin loader will attempt to fetch the plugin URL via HttpGet and run it with loadstring.
---  - Use at your own risk on online games; server-side protections may block some actions.
+-- This version restores Sections (Opened = true) so UI shows reliably.
+-- Removes expandable/collapsible confusion by keeping sections open by default.
+-- Fixes theme dropdown to use WindUI:GetThemes() safely and applies transparency with UpdateTransparency if available.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,7 +17,6 @@ end)
 
 if not ok or not WindUI then
     warn("[AdminPanel] Failed to load WindUI library. Check HTTP permissions and URL.")
-    -- Try to send a StarterGui notification if available
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "AdminPanel",
@@ -72,7 +68,7 @@ Window:CreateTopbarButton("theme-switcher", "moon", function()
     WindUI:Notify({ Title = "Theme Changed", Content = "Current theme: "..WindUI:GetCurrentTheme(), Duration = 2 })
 end, 990)
 
--- Sections and tabs
+-- Sections and tabs (top-level sections remain, each tab will have one Section that is Opened = true)
 local Features = Window:Section({ Title = "Features", Opened = true })
 local Settings = Window:Section({ Title = "Settings", Opened = true })
 local Utilities = Window:Section({ Title = "Utilities", Opened = true })
@@ -95,11 +91,12 @@ local state = {
     speedEnabled = false,
     speedValue = 25,
     autoRejoin = false,
+    autoRejoinConn = nil,
     plugins = {}, -- {name, code, thread}
-    keybinds = {}, -- {name, keyCode, callback, enabled}
+    keybinds = {}, -- {name, key, callback, enabled}
 }
 
--- Helper: safe get character/humanoid/hrp
+-- Helper functions
 local function GetCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
@@ -111,96 +108,8 @@ local function GetHRP()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     return char and char:FindFirstChild("HumanoidRootPart")
 end
-
 local function Notify(t) WindUI:Notify(t) end
 
--- ---------- ADMIN UI ----------
--- REMOVED adminSection assignment
- Title = "Player Controls", Icon = "user" })
-
-local flyToggle = AdminTab:Toggle({
-    Title = "Fly",
-    Value = false,
-    Callback = function(v)
-        state.fly = v
-        Notify({ Title = "Fly", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 })
-    end
-})
-
-local flingToggle = AdminTab:Toggle({
-    Title = "Fling",
-    Value = false,
-    Callback = function(v)
-        state.fling = v
-        Notify({ Title = "Fling", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 })
-    end
-})
-
-local noclipToggle = AdminTab:Toggle({
-    Title = "Noclip",
-    Value = false,
-    Callback = function(v)
-        state.noclip = v
-        Notify({ Title = "Noclip", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 })
-    end
-})
-
-local antiFlingToggle = AdminTab:Toggle({
-    Title = "Anti-Fling",
-    Value = false,
-    Callback = function(v)
-        state.antiFling = v
-        if v then
-            -- start naive anti-fling watcher
-            task.spawn(function()
-                while state.antiFling do
-                    local hrp = GetHRP()
-                    if hrp and hrp.Velocity.Magnitude > 200 then
-                        hrp.Velocity = Vector3.new(0,0,0)
-                    end
-                    task.wait(0.1)
-                end
-            end)
-        end
-        Notify({ Title = "Anti-Fling", Content = v and "Enabled" or "Disabled", Duration = 2 })
-    end
-})
-
--- Speed controls
-local speedToggle = AdminTab:Toggle({
-    Title = "Enable Speed (25)",
-    Value = false,
-    Callback = function(v)
-        state.speedEnabled = v
-        local hum = GetHumanoid()
-        if hum then
-            hum.WalkSpeed = v and state.speedValue or 16
-        end
-        Notify({ Title = "Speed", Content = v and ("Enabled: "..state.speedValue) or "Disabled", Duration = 2 })
-    end
-})
-
-AdminTab:Button({
-    Title = "Increase Speed",
-    Callback = function()
-        state.speedValue = state.speedValue + 5
-        local hum = GetHumanoid()
-        if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
-        Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 })
-    end
-})
-
-AdminTab:Button({
-    Title = "Decrease Speed",
-    Callback = function()
-        state.speedValue = math.max(0, state.speedValue - 5)
-        local hum = GetHumanoid()
-        if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
-        Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 })
-    end
-})
-
--- Inputs that execute on Enter
 local function findPlayerByName(part)
     if not part or part == "" then return nil end
     part = part:lower()
@@ -212,9 +121,97 @@ local function findPlayerByName(part)
     return nil
 end
 
--- Spectate
-local currentSpectate = nil
-AdminTab:Input({
+-- Each tab gets a Section (Opened = true) so UI is visible and not collapsible by default
+local adminSection = AdminTab:Section({ Title = "Player Controls", Opened = true, Icon = "user" })
+local execSection = ExecTab:Section({ Title = "Executor", Opened = true, Icon = "terminal" })
+local emoteSection = EmoteTab:Section({ Title = "Emotes", Opened = true, Icon = "music" })
+local appearanceSection = AppearanceTab:Section({ Title = "Theme & Transparency", Opened = true, Icon = "palette" })
+local configSection = ConfigTab:Section({ Title = "Configuration Manager", Opened = true, Icon = "save" })
+local pluginsSection = PluginsTab:Section({ Title = "Plugin Loader", Opened = true, Icon = "package" })
+local keybindSection = KeybindTab:Section({ Title = "Keybinds", Opened = true, Icon = "keyboard" })
+
+-- ---------- ADMIN CONTROLS ----------
+local flyToggle = adminSection:Toggle({
+    Title = "Fly",
+    Value = false,
+    Callback = function(v)
+        state.fly = v
+        Notify({ Title = "Fly", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 })
+    end
+})
+
+local flingToggle = adminSection:Toggle({
+    Title = "Fling",
+    Value = false,
+    Callback = function(v)
+        state.fling = v
+        Notify({ Title = "Fling", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 })
+    end
+})
+
+local noclipToggle = adminSection:Toggle({
+    Title = "Noclip",
+    Value = false,
+    Callback = function(v)
+        state.noclip = v
+        Notify({ Title = "Noclip", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 })
+    end
+})
+
+local antiFlingToggle = adminSection:Toggle({
+    Title = "Anti-Fling",
+    Value = false,
+    Callback = function(v)
+        state.antiFling = v
+        if v then
+            task.spawn(function()
+                while state.antiFling do
+                    local hrp = GetHRP()
+                    if hrp and hrp.Velocity and hrp.Velocity.Magnitude > 200 then
+                        hrp.Velocity = Vector3.new(0,0,0)
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+        Notify({ Title = "Anti-Fling", Content = v and "Enabled" or "Disabled", Duration = 2 })
+    end
+})
+
+-- Speed controls
+local speedToggle = adminSection:Toggle({
+    Title = "Enable Speed (25)",
+    Value = false,
+    Callback = function(v)
+        state.speedEnabled = v
+        local hum = GetHumanoid()
+        if hum then hum.WalkSpeed = v and state.speedValue or 16 end
+        Notify({ Title = "Speed", Content = v and ("Enabled: "..state.speedValue) or "Disabled", Duration = 2 })
+    end
+})
+
+adminSection:Button({
+    Title = "Increase Speed",
+    Callback = function()
+        state.speedValue = state.speedValue + 5
+        local hum = GetHumanoid()
+        if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
+        Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 })
+    end
+})
+
+adminSection:Button({
+    Title = "Decrease Speed",
+    Callback = function()
+        state.speedValue = math.max(0, state.speedValue - 5)
+        local hum = GetHumanoid()
+        if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
+        Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 })
+    end
+})
+
+-- Exec inputs (Enter triggers)
+adminSection:Input({
     Title = "Spectate Player",
     Placeholder = "Player name, press Enter",
     Callback = function(name)
@@ -225,7 +222,6 @@ AdminTab:Input({
             if hum then
                 workspace.CurrentCamera.CameraSubject = hum
                 workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-                currentSpectate = target
                 Notify({ Title = "Spectate", Content = "Now spectating "..target.Name, Duration = 2 })
             end
         else
@@ -234,21 +230,19 @@ AdminTab:Input({
     end
 })
 
-AdminTab:Button({
+adminSection:Button({
     Title = "Stop Spectate",
     Callback = function()
         local hum = GetHumanoid()
         if hum then
             workspace.CurrentCamera.CameraSubject = hum
             workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-            currentSpectate = nil
             Notify({ Title = "Spectate", Content = "Stopped spectating", Duration = 2 })
         end
     end
 })
 
--- HeadSit (placeholder)
-AdminTab:Input({
+adminSection:Input({
     Title = "HeadSit Player",
     Placeholder = "Player name, press Enter",
     Callback = function(name)
@@ -262,24 +256,21 @@ AdminTab:Input({
     end
 })
 
-AdminTab:Button({
+adminSection:Button({
     Title = "Stop HeadSit",
-    Callback = function()
-        Notify({ Title = "HeadSit", Content = "Stop HeadSit (placeholder)", Duration = 2 })
-    end
+    Callback = function() Notify({ Title = "HeadSit", Content = "Stop HeadSit (placeholder)", Duration = 2 }) end
 })
 
--- Teleport to player (client-side attempt)
-AdminTab:Input({
+adminSection:Input({
     Title = "Teleport to Player (tp)",
     Placeholder = "Player name, press Enter",
     Callback = function(name)
         if not name or name == "" then return end
         local target = findPlayerByName(name)
-        if target and target.Character then
+        local hrp = GetHRP()
+        if target and target.Character and hrp then
             local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
-            local hrp = GetHRP()
-            if targetHRP and hrp then
+            if targetHRP then
                 hrp.CFrame = targetHRP.CFrame + Vector3.new(0,2,0)
                 Notify({ Title = "Teleport", Content = "Teleported to "..target.Name, Duration = 2 })
             else
@@ -291,8 +282,7 @@ AdminTab:Input({
     end
 })
 
--- Bring (goto): attempt MoveTo
-AdminTab:Input({
+adminSection:Input({
     Title = "Bring Player (goto)",
     Placeholder = "Player name, press Enter",
     Callback = function(name)
@@ -313,8 +303,7 @@ AdminTab:Input({
     end
 })
 
--- Goto Part
-AdminTab:Input({
+adminSection:Input({
     Title = "Goto Part (workspace name)",
     Placeholder = "Part name, press Enter",
     Callback = function(name)
@@ -333,8 +322,7 @@ AdminTab:Input({
     end
 })
 
--- Freeze player (client-side anchor simulation)
-AdminTab:Input({
+adminSection:Input({
     Title = "Freeze Player",
     Placeholder = "Player name, press Enter",
     Callback = function(name)
@@ -351,8 +339,7 @@ AdminTab:Input({
     end
 })
 
--- Unfreeze all (client-side)
-AdminTab:Button({
+adminSection:Button({
     Title = "Unfreeze All (client-side)",
     Callback = function()
         for _, p in pairs(Players:GetPlayers()) do
@@ -367,17 +354,15 @@ AdminTab:Button({
 })
 
 -- ---------- EXECUTOR TAB ----------
--- REMOVED execSection assignment
- Title = "Executor", Icon = "terminal" })
+execSection:Paragraph({ Title = "Executor", Desc = "Type commands and press Enter", Image = "terminal" })
 local lastCommand = ""
 
-ExecTab:Input({
+execSection:Input({
     Title = "Command Bar",
     Placeholder = "Type command and press Enter (no eval by default)",
     Callback = function(txt)
         if not txt or txt == "" then return end
         lastCommand = txt
-        -- simple command parser
         local lower = txt:lower()
         if lower == ";rejoin" or lower == "rejoin" then
             pcall(function() Notify({ Title = "Rejoin", Content = "Attempting to rejoin...", Duration = 2 }) TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
@@ -385,7 +370,6 @@ ExecTab:Input({
         end
         if lower:sub(1,4) == ";tp " then
             local name = txt:sub(5)
-            -- reuse teleport logic above
             local target = findPlayerByName(name)
             local hrp = GetHRP()
             if target and target.Character and hrp then
@@ -394,7 +378,6 @@ ExecTab:Input({
             end
             return
         end
-        -- default: show as executed (placeholder)
         Notify({ Title = "Executor", Content = "Executed (placeholder): "..txt, Duration = 3 })
         print("[Executor] "..txt)
         -- To enable real execution, uncomment with caution:
@@ -402,27 +385,22 @@ ExecTab:Input({
     end
 })
 
--- Rejoin button + Auto Rejoin
-ExecTab:Button({
+execSection:Button({
     Title = "Rejoin",
     Icon = "corner-down-right",
     Callback = function() pcall(function() Notify({ Title = "Rejoin", Content = "Teleporting...", Duration = 2 }) TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end
 })
 
-ExecTab:Toggle({
+execSection:Toggle({
     Title = "Auto Rejoin (on kick/disconnect)",
     Value = false,
     Callback = function(v)
         state.autoRejoin = v
         Notify({ Title = "AutoRejoin", Content = v and "Enabled" or "Disabled", Duration = 2 })
-        -- naive attempt: listen for PlayerRemoving of LocalPlayer (may not be fired for kicks in some executors)
         if v then
-            -- disconnect old if any
             if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end
             state.autoRejoinConn = Players.PlayerRemoving:Connect(function(p)
-                if p == LocalPlayer then
-                    pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
-                end
+                if p == LocalPlayer then pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end
             end)
         else
             if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end
@@ -430,43 +408,35 @@ ExecTab:Toggle({
     end
 })
 
--- ---------- EMOTES (placeholders) ----------
--- REMOVED emoteSection assignment
- Title = "Emotes", Icon = "music" })
-local emotes = {
-    { Name = "Dance 1" },
-    { Name = "Dance 2" },
-    { Name = "Dance Crazy" },
-    { Name = "Float Dance" },
-    { Name = "Freeze Fly" },
-}
-for _, e in ipairs(emotes) do
-    EmoteTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name.." (placeholder)", Duration = 2 }) end })
+-- ---------- EMOTES ----------
+emoteSection:Paragraph({ Title = "Emotes", Desc = "Placeholder emote buttons (replace animation IDs)", Image = "music" })
+local emoteList = { "Dance 1", "Dance 2", "Spin", "Float Up (placeholder)", "Freeze Air (placeholder)" }
+for _, name in ipairs(emoteList) do
+    emoteSection:Button({ Title = name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = name.." (placeholder)", Duration = 2 }) end })
 end
-EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped (placeholder)", Duration = 2 }) end })
+emoteSection:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped (placeholder)", Duration = 2 }) end })
 
 -- ---------- APPEARANCE ----------
-AppearanceTab:Paragraph({ Title = "Customize Interface", Desc = "Theme & Transparency", Image = "palette", ImageSize = 20 })
+appearanceSection:Paragraph({ Title = "Customize Interface", Desc = "Theme & Transparency", Image = "palette", ImageSize = 20 })
 local themes = {}
-for name, _ in pairs(WindUI:GetThemes()) do table.insert(themes, name) end
+for name,_ in pairs(WindUI:GetThemes()) do table.insert(themes, name) end
 table.sort(themes)
-local themeDropdown = AppearanceTab:Dropdown({
+local themeDropdown = appearanceSection:Dropdown({
     Title = "Select Theme",
     Values = themes,
     Value = WindUI:GetCurrentTheme(),
     Callback = function(theme)
         WindUI:SetTheme(theme)
-        Notify({ Title = "Theme", Content = theme, Duration = 2 })
+        Notify({ Title = "Theme Applied", Content = theme, Duration = 2 })
     end
 })
 
-local transparencySlider = AppearanceTab:Slider({
+local transparencySlider = appearanceSection:Slider({
     Title = "Window Transparency",
     Value = { Min = 0, Max = 1, Default = WindUI.TransparencyValue or 0.18 },
     Step = 0.01,
     Callback = function(value)
         WindUI.TransparencyValue = tonumber(value)
-        -- Try to apply immediately; use UpdateTransparency if available, otherwise ToggleTransparency trick
         if Window.UpdateTransparency then
             pcall(function() Window:UpdateTransparency() end)
         else
@@ -475,7 +445,7 @@ local transparencySlider = AppearanceTab:Slider({
     end
 })
 
-local themeToggle = AppearanceTab:Toggle({
+local themeToggle = appearanceSection:Toggle({
     Title = "Dark Mode",
     Value = (WindUI:GetCurrentTheme() == "Dark"),
     Callback = function(state) WindUI:SetTheme(state and "Dark" or "Light") end
@@ -486,7 +456,7 @@ WindUI:OnThemeChange(function(newTheme)
 end)
 
 -- ---------- CONFIGURATION ----------
-ConfigTab:Paragraph({ Title = "Configuration Manager", Desc = "Save and load your settings", Image = "save", ImageSize = 20 })
+configSection:Paragraph({ Title = "Configuration Manager", Desc = "Save and load your settings", Image = "save", ImageSize = 20 })
 local ConfigManager = Window.ConfigManager
 local configName = "default"
 local configFile = nil
@@ -494,10 +464,9 @@ local configFile = nil
 if ConfigManager then
     ConfigManager:Init(Window)
 
-    ConfigTab:Input({ Title = "Config Name", Value = configName, Callback = function(v) configName = v or "default" end })
-    ConfigTab:Button({ Title = "Save Configuration", Icon = "save", Variant = "Primary", Callback = function()
+    configSection:Input({ Title = "Config Name", Value = configName, Callback = function(v) configName = v or "default" end })
+    configSection:Button({ Title = "Save Configuration", Icon = "save", Variant = "Primary", Callback = function()
         configFile = ConfigManager:CreateConfig(configName)
-        -- register some controls (theme & transparency & speed toggles)
         pcall(function()
             configFile:Register("themeDropdown", themeDropdown)
             configFile:Register("transparencySlider", transparencySlider)
@@ -510,11 +479,10 @@ if ConfigManager then
         configFile:Set("lastSave", os.date("%Y-%m-%d %H:%M:%S"))
         if configFile:Save() then Notify({ Title = "Config", Content = "Saved: "..configName, Duration = 3 }) end
     end })
-    ConfigTab:Button({ Title = "Load Configuration", Icon = "folder", Callback = function()
+    configSection:Button({ Title = "Load Configuration", Icon = "folder", Callback = function()
         configFile = ConfigManager:CreateConfig(configName)
         local loaded = configFile:Load()
         if loaded then
-            -- load saved values
             state.speedValue = loaded.speedValue or state.speedValue
             Notify({ Title = "Config", Content = "Loaded: "..configName, Duration = 3 })
         else
@@ -522,14 +490,14 @@ if ConfigManager then
         end
     end })
 else
-    ConfigTab:Paragraph({ Title = "Config Manager Not Available", Desc = "This feature requires ConfigManager", Image = "alert-triangle", ImageSize = 20 })
+    configSection:Paragraph({ Title = "Config Manager Not Available", Desc = "This feature requires ConfigManager", Image = "alert-triangle", ImageSize = 20 })
 end
 
 -- ---------- PLUGINS ----------
-PluginsTab:Paragraph({ Title = "Plugin Loader", Desc = "Load plugin code from a URL or paste raw Lua", Image = "plug", ImageSize = 18 })
+pluginsSection:Paragraph({ Title = "Plugin Loader", Desc = "Load plugin code from a URL or paste raw Lua", Image = "plug", ImageSize = 18 })
 local pluginInput = ""
-PluginsTab:Input({ Title = "Plugin URL or Code", Placeholder = "https://... or raw code", Callback = function(v) pluginInput = v end })
-PluginsTab:Button({ Title = "Add Plugin", Icon = "download", Callback = function()
+pluginsSection:Input({ Title = "Plugin URL or Code", Placeholder = "https://... or raw code", Callback = function(v) pluginInput = v end })
+pluginsSection:Button({ Title = "Add Plugin", Icon = "download", Callback = function()
     if not pluginInput or pluginInput == "" then Notify({ Title = "Plugin", Content = "No input", Duration = 2 }) return end
     local code = pluginInput
     if tostring(pluginInput):match("^https?://") then
@@ -545,11 +513,10 @@ PluginsTab:Button({ Title = "Add Plugin", Icon = "download", Callback = function
     if not suc then Notify({ Title = "Plugin", Content = "Plugin error: "..tostring(err), Duration = 3 }) end
     Notify({ Title = "Plugin", Content = "Loaded "..name, Duration = 2 })
 end })
-PluginsTab:Button({ Title = "List Plugins (refresh)", Icon = "refresh-cw", Callback = function()
-    -- naive listing by creating paragraphs (duplicating on repeated calls is normal for this simple UI)
+pluginsSection:Button({ Title = "List Plugins (refresh)", Icon = "refresh-cw", Callback = function()
     for i,pl in ipairs(state.plugins) do
-        PluginsTab:Paragraph({ Title = pl.name, Desc = "Loaded plugin", Image = "plug", ImageSize = 14 })
-        PluginsTab:Button({ Title = "Unload "..pl.name, Icon = "trash", Callback = (function(idx) return function()
+        pluginsSection:Paragraph({ Title = pl.name, Desc = "Loaded plugin", Image = "plug", ImageSize = 14 })
+        pluginsSection:Button({ Title = "Unload "..pl.name, Icon = "trash", Callback = (function(idx) return function()
             table.remove(state.plugins, idx)
             Notify({ Title = "Plugin", Content = "Unloaded plugin", Duration = 2 })
         end end)(i) })
@@ -557,18 +524,16 @@ PluginsTab:Button({ Title = "List Plugins (refresh)", Icon = "refresh-cw", Callb
 end })
 
 -- ---------- KEYBINDS ----------
-KeybindTab:Paragraph({ Title = "Keybinds", Desc = "Add keybinds to toggle admin features", Image = "keyboard", ImageSize = 18 })
+keybindSection:Paragraph({ Title = "Keybinds", Desc = "Add keybinds to toggle admin features", Image = "keyboard", ImageSize = 18 })
 local keyNameInput = ""
-KeybindTab:Input({ Title = "Key (e.g. K)", Placeholder = "Key letter or name", Callback = function(v) keyNameInput = v end })
+keybindSection:Input({ Title = "Key (e.g. K)", Placeholder = "Key letter or name", Callback = function(v) keyNameInput = v end })
 local actionNameInput = ""
-KeybindTab:Input({ Title = "Action (Fly/Noclip/Fling/AntiFling/Speed)", Placeholder = "Action name", Callback = function(v) actionNameInput = v end })
-KeybindTab:Button({ Title = "Add Keybind", Icon = "plus", Callback = function()
+keybindSection:Input({ Title = "Action (Fly/Noclip/Fling/AntiFling/Speed)", Placeholder = "Action name", Callback = function(v) actionNameInput = v end })
+keybindSection:Button({ Title = "Add Keybind", Icon = "plus", Callback = function()
     if keyNameInput == "" or not keyNameInput then Notify({ Title = "Keybind", Content = "Key required", Duration = 2 }) return end
     if actionNameInput == "" or not actionNameInput then Notify({ Title = "Keybind", Content = "Action required", Duration = 2 }) return end
-    local kc = nil
-    -- try common keys names -> Enum.KeyCode
     local up = string.upper(keyNameInput)
-    kc = Enum.KeyCode[up] or Enum.KeyCode[keyNameInput] or Enum.KeyCode[string.upper(keyNameInput)]
+    local kc = Enum.KeyCode[up] or Enum.KeyCode[keyNameInput] or Enum.KeyCode[string.upper(keyNameInput)]
     if not kc then Notify({ Title = "Keybind", Content = "Unknown key", Duration = 2 }) return end
     local action = string.lower(actionNameInput)
     local function callback()
@@ -582,7 +547,6 @@ KeybindTab:Button({ Title = "Add Keybind", Icon = "plus", Callback = function()
     Notify({ Title = "Keybind", Content = "Added "..actionNameInput.." on "..tostring(kc), Duration = 2 })
 end })
 
--- listen for key presses
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
@@ -595,7 +559,6 @@ end)
 
 -- ---------- CLEANUP ----------
 Window:OnClose(function()
-    -- try disconnect any listeners
     if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end
     Notify({ Title = "AdminPanel", Content = "Closed", Duration = 2 })
 end)
@@ -606,8 +569,7 @@ end)
 
 -- Ensure transparency applied at start
 pcall(function()
-    if Window.UpdateTransparency then Window:UpdateTransparency()
-    else Window:ToggleTransparency(WindUI.TransparencyValue > 0) end
+    if Window.UpdateTransparency then Window:UpdateTransparency() else Window:ToggleTransparency(WindUI.TransparencyValue > 0) end
 end)
 
--- End of adminpanel.lua
+-- End of file
