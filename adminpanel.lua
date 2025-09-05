@@ -23,14 +23,14 @@ WindUI.TransparencyValue = 0.18
 task.spawn(function() WindUI:SetTheme("Dark") end)
 
 local Window = WindUI:CreateWindow({
-    Title = "Triples",
-    Icon = "shield",
+    Title = "TripleS",
+    Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png",
     Author = "github.com/ihsanamiruddinn",
     Folder = "TripleS_Admin_UI",
     Size = UDim2.fromOffset(360, 300),
     Theme = "Dark",
     Acrylic = true,
-    SideBarWidth = 220,
+    SideBarWidth = 160,
 })
 
 pcall(function() if Window.Mount then Window:Mount() end end)
@@ -66,7 +66,7 @@ Window:CreateTopbarButton("theme-switcher", "moon", function()
     end)
 end, 990)
 
-local AdminTab = Window:Tab({ Title = "Admin", Icon = "shield", Desc = "Admin tools" })
+local AdminTab = Window:Tab({ Title = "Admin", Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png", Desc = "Admin tools" })
 local ExecTab = Window:Tab({ Title = "Executor", Icon = "terminal", Desc = "Type commands and press Enter" })
 local EmoteTab = Window:Tab({ Title = "Emotes", Icon = "music", Desc = "Play emotes" })
 local AppearanceTab = Window:Tab({ Title = "Appearance", Icon = "brush" })
