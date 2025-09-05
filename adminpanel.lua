@@ -23,11 +23,11 @@ WindUI.TransparencyValue = 0.18
 task.spawn(function() WindUI:SetTheme("Dark") end)
 
 local Window = WindUI:CreateWindow({
-    Title = "TripleS Admin Panel",
+    Title = "Triples",
     Icon = "shield",
     Author = "github.com/ihsanamiruddinn",
     Folder = "TripleS_Admin_UI",
-    Size = UDim2.fromOffset(640, 420),
+    Size = UDim2.fromOffset(360, 300),
     Theme = "Dark",
     Acrylic = true,
     SideBarWidth = 220,
