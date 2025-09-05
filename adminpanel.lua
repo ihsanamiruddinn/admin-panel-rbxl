@@ -1,6 +1,6 @@
--- Fixed adminpanel.lua with simplified Appearance (only Dark & Light themes), removed Dark Mode toggle, and removed expandable sections
+-- Fixed adminpanel.lua for KRNL execution -- Simplified Appearance (only Dark & Light themes), removed Dark Mode toggle, removed expandable sections -- Added Window:Open() and changed require to loadstring for KRNL compatibility
 
-local WindUI = require("./src/init")
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/init.lua"))()
 
 WindUI:SetTheme("Dark")
 
@@ -25,4 +25,6 @@ local transparencySlider = TabHandles.Appearance:Slider({ Title = "Window Transp
 Window:OnClose(function() print("Window closed") end)
 
 Window:OnDestroy(function() print("Window destroyed") end)
+
+-- Ensure window opens Window:Open()
 
