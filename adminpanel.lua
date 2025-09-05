@@ -50,24 +50,6 @@ Window.OnRestore:Connect(function()
 end)
  end end)
 
-Window:Tag({ Title = "Admin v2.0", Color = Color3.fromHex("#30ff6a") })
-local TimeTag = Window:Tag({
-    Title = "--:--",
-    Radius = 0,
-    Color = WindUI:Gradient({
-        ["0"] = { Color = Color3.fromHex("#FF0F7B"), Transparency = 0 },
-        ["100"] = { Color = Color3.fromHex("#F89B29"), Transparency = 0 },
-    }, { Rotation = 45 })
-})
-task.spawn(function()
-    while task.wait(1) do
-        local now = os.date("*t")
-        pcall(function() TimeTag:SetTitle(string.format("%02d:%02d", now.hour, now.min)) end)
-    end
-end)
-
-local suppressThemeToggle = false
-
 Window:CreateTopbarButton("theme-switcher", "moon", function()
     task.spawn(function()
         local current = WindUI:GetCurrentTheme()
@@ -113,7 +95,13 @@ local function GetHRP()
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
-local function Notify(t) WindUI:Notify(t) end
+local notifyAllowed = false
+task.spawn(function() task.wait(3) notifyAllowed = true end)
+local _origNotify = WindUI.Notify
+local function Notify(t)
+    if not notifyAllowed then return end
+    pcall(function() _origNotify(WindUI, t) end)
+end
 
 local flyToggle = AdminTab:Toggle({
     Title = "Fly",
@@ -556,7 +544,6 @@ end)
 
 Window:OnClose(function()
     if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end
-    Notify({ Title = "AdminPanel", Content = "Closed", Duration = 2 })
 end)
 
 Window:OnDestroy(function()
@@ -567,3 +554,41 @@ pcall(function()
     if Window.UpdateTransparency then Window:UpdateTransparency()
     else Window:ToggleTransparency(WindUI.TransparencyValue > 0) end
 end)
+
+local topbar = nil
+pcall(function() topbar = Window:GetTopbar() end)
+if not topbar then
+    pcall(function()
+        local main = Window:GetMain()
+        if main then
+            for _,c in pairs(main:GetDescendants()) do
+                if c:IsA("Frame") and string.lower(c.Name):find("top") then topbar = c break end
+            end
+        end
+    end)
+end
+if topbar then
+    pcall(function()
+        local logo = Instance.new("ImageLabel")
+        logo.Name = "CustomLogo"
+        logo.Size = UDim2.fromOffset(20,20)
+        logo.Position = UDim2.new(0,8,0.5,0)
+        logo.AnchorPoint = Vector2.new(0,0.5)
+        logo.BackgroundTransparency = 1
+        logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
+        logo.Parent = topbar
+    end)
+    pcall(function()
+        local ver = Instance.new("TextLabel")
+        ver.Name = "VersionTag"
+        ver.Size = UDim2.new(0,80,0,20)
+        ver.AnchorPoint = Vector2.new(1,0.5)
+        ver.Position = UDim2.new(1,-56,0.5,0)
+        ver.BackgroundTransparency = 1
+        ver.Text = "v2.0"
+        ver.Font = Enum.Font.SourceSansSemibold
+        ver.TextSize = 14
+        ver.TextColor3 = Color3.fromRGB(200,200,200)
+        ver.Parent = topbar
+    end)
+end
