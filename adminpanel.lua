@@ -1,218 +1,257 @@
--- TripleS Admin UI - Full Version v2
--- Author: ihsanamiruddinn
--- github.com/ihsanamiruddinn
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/TripleS-UI/main/dist/main.lua"))()
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+-- 🌐 Localization
+WindUI:Localization({
+    Enabled = true,
+    Prefix = "loc:",
+    DefaultLanguage = "en",
+    Translations = {
+        ["en"] = {
+            ["WINDUI_EXAMPLE"] = "WindUI Example",
+            ["WELCOME"] = "Welcome to WindUI!",
+            ["LIB_DESC"] = "Beautiful UI library for Roblox",
+            ["SETTINGS"] = "Settings",
+            ["APPEARANCE"] = "Appearance",
+            ["FEATURES"] = "Features",
+            ["UTILITIES"] = "Utilities",
+            ["UI_ELEMENTS"] = "UI Elements",
+            ["CONFIGURATION"] = "Configuration",
+            ["SAVE_CONFIG"] = "Save Configuration",
+            ["LOAD_CONFIG"] = "Load Configuration",
+            ["THEME_SELECT"] = "Select Theme",
+            ["TRANSPARENCY"] = "Window Transparency",
+            ["PLUGINS"] = "Plugins",
+            ["KEYBINDS"] = "Keybinds"
+        }
+    }
+})
 
-local success, WindUI = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/TripleS-UI/main/dist/main.lua"))()
-end)
-
-if not success or not WindUI then
-    warn("[TripleS Admin UI] Failed to load WindUI library!")
-    if game:GetService("StarterGui") then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "TripleS Admin UI",
-            Text = "WindUI gagal dimuat! Periksa link GitHub.",
-            Duration = 5
-        })
-    end
-    return
-end
-
+-- 🌙 Theme + transparency default
+WindUI.TransparencyValue = 0.2
 WindUI:SetTheme("Dark")
-WindUI.TransparencyValue = 0.15
 
--- Main Window
+-- 🌟 Main Window
 local Window = WindUI:CreateWindow({
-    Title = "TripleS Admin UI v2",
-    Icon = "shield",
-    Author = "github.com/ihsanamiruddinn",
-    Folder = "TripleS_Admin_UI",
-    Size = UDim2.fromOffset(540, 400),
+    Title = "loc:WINDUI_EXAMPLE",
+    Icon = "geist:window",
+    Author = "loc:WELCOME",
+    Folder = "WindUI_Example",
+    Size = UDim2.fromOffset(300, 260),
     Theme = "Dark",
     Acrylic = true,
-    SideBarWidth = 200,
+    HideSearchBar = false,
+    SideBarWidth = 200
 })
 
-Window:Tag({ Title = "Admin v2.0", Color = Color3.fromRGB(0, 255, 100) })
-
--- Sections
-local Sections = {
-    Features = Window:Section({ Title = "Features", Opened = true }),
-    Settings = Window:Section({ Title = "Settings", Opened = true }),
-    Config = Window:Section({ Title = "Configuration", Opened = true }),
-    Utility = Window:Section({ Title = "Utility", Opened = false })
-}
-
--- Tabs
+-- 🏷️ Tabs
 local Tabs = {
-    Admin = Sections.Features:Tab({ Title = "Admin", Icon = "shield" }),
-    Executor = Sections.Features:Tab({ Title = "Executor", Icon = "terminal" }),
-    Emotes = Sections.Features:Tab({ Title = "Emotes", Icon = "music" }),
-    Appearance = Sections.Settings:Tab({ Title = "Appearance", Icon = "brush" }),
-    Config = Sections.Config:Tab({ Title = "Config", Icon = "settings" }),
-    Plugins = Sections.Config:Tab({ Title = "Plugins", Icon = "package" }),
-    Keybinds = Sections.Utility:Tab({ Title = "Keybinds", Icon = "keyboard" })
+    Features = Window:Section({ Title = "loc:FEATURES", Opened = true }),
+    Settings = Window:Section({ Title = "loc:SETTINGS", Opened = true }),
+    Utilities = Window:Section({ Title = "loc:UTILITIES", Opened = true })
 }
 
---------------------------------------------------
--- ADMIN COMMANDS
---------------------------------------------------
-local walkSpeed = 16
+-- 🔖 Sub Tabs
+local TabHandles = {
+    Admin = Tabs.Features:Tab({ Title = "Admin", Icon = "shield", Desc = "Admin Commands" }),
+    Executor = Tabs.Features:Tab({ Title = "Executor", Icon = "terminal", Desc = "Command Bar" }),
+    Emotes = Tabs.Features:Tab({ Title = "Emotes", Icon = "smile", Desc = "Fun Animations" }),
+    Appearance = Tabs.Settings:Tab({ Title = "loc:APPEARANCE", Icon = "brush" }),
+    Config = Tabs.Utilities:Tab({ Title = "loc:CONFIGURATION", Icon = "settings" }),
+    Plugins = Tabs.Utilities:Tab({ Title = "loc:PLUGINS", Icon = "package" }),
+    Keybinds = Tabs.Utilities:Tab({ Title = "loc:KEYBINDS", Icon = "keyboard" })
+}
 
-Tabs.Admin:Toggle({
-    Title = "Fly (toggle)", Value = false, 
-    Callback = function(v) end
-})
-Tabs.Admin:Toggle({
-    Title = "Noclip (toggle)", Value = false, 
-    Callback = function(v) end
-})
-Tabs.Admin:Toggle({
-    Title = "Fling (toggle)", Value = false, 
-    Callback = function(v) end
-})
-Tabs.Admin:Toggle({
-    Title = "Anti Fling", Value = false, 
-    Callback = function(v) end
+------------------------------------------------
+-- 🛠️ Admin Commands (with input/toggle)
+------------------------------------------------
+local AdminSection = TabHandles.Admin:Section({ Title = "Player Commands", Icon = "user" })
+
+AdminSection:Toggle({
+    Title = "Fly",
+    Value = false,
+    Callback = function(state) print("Fly:", state) end
 })
 
--- Speed Control
-Tabs.Admin:Toggle({
-    Title = "Speed (set 25)", Value = false,
-    Callback = function(v)
-        if Humanoid then
-            if v then
-                Humanoid.WalkSpeed = 25
-                walkSpeed = 25
-            else
-                Humanoid.WalkSpeed = 16
-                walkSpeed = 16
-            end
-        end
-    end
+AdminSection:Toggle({
+    Title = "Fling",
+    Value = false,
+    Callback = function(state) print("Fling:", state) end
 })
-Tabs.Admin:Button({
-    Title = "+ Speed",
+
+AdminSection:Toggle({
+    Title = "Noclip",
+    Value = false,
+    Callback = function(state) print("Noclip:", state) end
+})
+
+AdminSection:Input({
+    Title = "Spectate Player",
+    Placeholder = "Enter player name",
+    Callback = function(name) print("Spectate:", name) end
+})
+
+AdminSection:Button({
+    Title = "Stop Spectating",
+    Callback = function() print("Spectate stopped") end
+})
+
+AdminSection:Input({
+    Title = "HeadSit Player",
+    Placeholder = "Enter player name",
+    Callback = function(name) print("HeadSit:", name) end
+})
+
+AdminSection:Input({
+    Title = "Teleport To Player",
+    Placeholder = "Enter player name",
+    Callback = function(name) print("TP to:", name) end
+})
+
+AdminSection:Input({
+    Title = "Goto Part",
+    Placeholder = "Enter part name",
+    Callback = function(part) print("Goto part:", part) end
+})
+
+AdminSection:Input({
+    Title = "Freeze Player",
+    Placeholder = "Enter player name",
+    Callback = function(name) print("Freeze:", name) end
+})
+
+-- Speed Controls
+local speedValue = 25
+AdminSection:Toggle({
+    Title = "Enable Speed (25)",
+    Value = false,
+    Callback = function(state) print("Speed enabled:", state, "Value:", speedValue) end
+})
+
+AdminSection:Button({
+    Title = "Increase Speed",
     Callback = function()
-        if Humanoid then
-            walkSpeed = walkSpeed + 5
-            Humanoid.WalkSpeed = walkSpeed
-        end
+        speedValue = speedValue + 5
+        print("Speed increased to:", speedValue)
     end
 })
-Tabs.Admin:Button({
-    Title = "- Speed",
+
+AdminSection:Button({
+    Title = "Decrease Speed",
     Callback = function()
-        if Humanoid then
-            walkSpeed = math.max(0, walkSpeed - 5)
-            Humanoid.WalkSpeed = walkSpeed
-        end
+        speedValue = math.max(0, speedValue - 5)
+        print("Speed decreased to:", speedValue)
     end
 })
 
--- Other Admin Inputs
-Tabs.Admin:Input({ Title = "Spectate Player", Placeholder = "Player name", Callback = function(txt) end })
-Tabs.Admin:Button({ Title = "Stop Spectate", Callback = function() end })
-Tabs.Admin:Input({ Title = "Headsit Player", Placeholder = "Player name", Callback = function(txt) end })
-Tabs.Admin:Button({ Title = "Stop Headsit", Callback = function() end })
-Tabs.Admin:Input({ Title = "Teleport to Player", Placeholder = "Player name", Callback = function(txt) end })
-Tabs.Admin:Input({ Title = "Bring Player", Placeholder = "Player name", Callback = function(txt) end })
-Tabs.Admin:Input({ Title = "Goto Part", Placeholder = "Part name", Callback = function(txt) end })
-Tabs.Admin:Input({ Title = "Freeze Player", Placeholder = "Player name", Callback = function(txt) end })
-
---------------------------------------------------
--- EXECUTOR
---------------------------------------------------
-Tabs.Executor:Input({ Title = "Command Bar", Placeholder = ";cmd args", Callback = function(txt) end })
-Tabs.Executor:Button({ Title = "Rejoin", Callback = function() end })
-Tabs.Executor:Toggle({ Title = "Auto Rejoin", Value = false, Callback = function(v) end })
-
---------------------------------------------------
--- EMOTES
---------------------------------------------------
-Tabs.Emotes:Button({ Title = "Play Dance 1", Callback = function() end })
-Tabs.Emotes:Button({ Title = "Play Dance 2", Callback = function() end })
-Tabs.Emotes:Button({ Title = "Float", Callback = function() end })
-Tabs.Emotes:Button({ Title = "Freeze", Callback = function() end })
-Tabs.Emotes:Button({ Title = "Stop Emote", Callback = function() end })
-
---------------------------------------------------
--- APPEARANCE
---------------------------------------------------
-Tabs.Appearance:Dropdown({
-    Title = "Theme",
-    Values = {"Dark","Light"},
-    Value = "Dark",
-    Callback = function(v) WindUI:SetTheme(v) end
-})
-Tabs.Appearance:Slider({
-    Title = "Transparency",
-    Value = { Min = 0, Max = 1, Default = 0.15 },
-    Step = 0.05,
-    Callback = function(val) WindUI.TransparencyValue = val end
+AdminSection:Toggle({
+    Title = "Anti-Fling",
+    Value = false,
+    Callback = function(state) print("Anti-Fling:", state) end
 })
 
---------------------------------------------------
--- CONFIGURATION
---------------------------------------------------
-Tabs.Config:Button({ Title = "Save Config", Callback = function() end })
-Tabs.Config:Button({ Title = "Load Config", Callback = function() end })
+------------------------------------------------
+-- 💻 Executor
+------------------------------------------------
+local ExecutorSection = TabHandles.Executor:Section({ Title = "Command Executor", Icon = "terminal" })
 
---------------------------------------------------
--- PLUGINS
---------------------------------------------------
-Tabs.Plugins:Paragraph({ Title = "Plugins", Desc = "Support for extra modules" })
-Tabs.Plugins:Input({
+ExecutorSection:Input({
+    Title = "Enter Command",
+    Placeholder = "Type command here and press Enter",
+    ClearTextOnFocus = true,
+    Callback = function(command)
+        print("Executed command:", command)
+    end
+})
+
+ExecutorSection:Button({
+    Title = "Rejoin",
+    Callback = function() print("Rejoining server...") end
+})
+
+ExecutorSection:Toggle({
+    Title = "Auto Rejoin",
+    Value = false,
+    Callback = function(state) print("Auto Rejoin:", state) end
+})
+
+------------------------------------------------
+-- 😎 Emotes
+------------------------------------------------
+local EmoteSection = TabHandles.Emotes:Section({ Title = "Dance Emotes", Icon = "music" })
+
+EmoteSection:Button({ Title = "Dance 1", Callback = function() print("Dance 1") end })
+EmoteSection:Button({ Title = "Dance 2", Callback = function() print("Dance 2") end })
+EmoteSection:Button({ Title = "Dance Crazy", Callback = function() print("Dance Crazy") end })
+EmoteSection:Button({ Title = "Float Dance", Callback = function() print("Float Dance") end })
+EmoteSection:Button({ Title = "Freeze Fly", Callback = function() print("Freeze Fly") end })
+
+------------------------------------------------
+-- 🎨 Appearance
+------------------------------------------------
+local transparencySlider = TabHandles.Appearance:Slider({
+    Title = "loc:TRANSPARENCY",
+    Value = { Min = 0, Max = 1, Default = 0.2 },
+    Step = 0.1,
+    Callback = function(value)
+        WindUI.TransparencyValue = tonumber(value)
+        Window:UpdateTransparency()
+    end
+})
+
+------------------------------------------------
+-- ⚙️ Configuration
+------------------------------------------------
+local ConfigSection = TabHandles.Config:Section({ Title = "Config Manager", Icon = "settings" })
+ConfigSection:Button({
+    Title = "Save Configuration",
+    Callback = function() print("Config Saved") end
+})
+ConfigSection:Button({
+    Title = "Load Configuration",
+    Callback = function() print("Config Loaded") end
+})
+
+------------------------------------------------
+-- 📦 Plugins
+------------------------------------------------
+local PluginSection = TabHandles.Plugins:Section({ Title = "Manage Plugins", Icon = "package" })
+PluginSection:Button({
     Title = "Add Plugin",
-    Placeholder = "Enter plugin link",
-    Callback = function(link)
-        if link and link ~= "" then
-            pcall(function()
-                loadstring(game:HttpGet(link))()
-            end)
-        end
-    end
+    Callback = function() print("Plugin Added") end
 })
 
---------------------------------------------------
--- KEYBINDS
---------------------------------------------------
-Tabs.Keybinds:Paragraph({ Title = "Admin Toggles Keybind", Desc = "Bind keys to admin features" })
-Tabs.Keybinds:Keybind({
-    Title = "Toggle Fly",
-    Key = Enum.KeyCode.F,
-    Callback = function() end
-})
-Tabs.Keybinds:Keybind({
-    Title = "Toggle Noclip",
-    Key = Enum.KeyCode.N,
-    Callback = function() end
-})
-Tabs.Keybinds:Keybind({
-    Title = "Toggle Fling",
-    Key = Enum.KeyCode.G,
-    Callback = function() end
-})
-Tabs.Keybinds:Keybind({
-    Title = "Toggle Anti Fling",
-    Key = Enum.KeyCode.H,
-    Callback = function() end
-})
-Tabs.Keybinds:Keybind({
-    Title = "Toggle Speed",
-    Key = Enum.KeyCode.J,
-    Callback = function() end
+------------------------------------------------
+-- ⌨️ Keybinds
+------------------------------------------------
+local KeybindSection = TabHandles.Keybinds:Section({ Title = "Manage Keybinds", Icon = "keyboard" })
+KeybindSection:Button({
+    Title = "Add Keybind",
+    Callback = function() print("Keybind Added") end
 })
 
---------------------------------------------------
--- FOOTER
---------------------------------------------------
-Tabs.Config:Paragraph({
-    Title = "Created with ❤️ by ihsanamiruddinn",
+------------------------------------------------
+-- ❤️ Footer
+------------------------------------------------
+local footerSection = Window:Section({ Title = "WindUI " .. WindUI.Version })
+footerSection:Paragraph({
+    Title = "Created with ❤️",
     Desc = "github.com/ihsanamiruddinn",
-    Image = "github"
+    Image = "github",
+    ImageSize = 20,
+    Color = "Grey",
+    Buttons = {
+        {
+            Title = "Copy Link",
+            Icon = "copy",
+            Variant = "Tertiary",
+            Callback = function()
+                setclipboard("https://github.com/ihsanamiruddinn")
+                WindUI:Notify({
+                    Title = "Copied!",
+                    Content = "GitHub link copied to clipboard",
+                    Duration = 2
+                })
+            end
+        }
+    }
 })
