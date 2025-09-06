@@ -361,7 +361,16 @@ pcall(function()
 end)
 
 pcall(function()
-    local topbar = Window:GetTopbar()
+    local topbar = nil
+    if Window.GetTopbar then
+        pcall(function() topbar = Window:GetTopbar() end)
+    end
+    if not topbar and Window.GetMain then
+        pcall(function() topbar = Window:GetMain():FindFirstChild("Topbar", true) end)
+        if not topbar then
+            pcall(function() topbar = Window:GetMain() end)
+        end
+    end
     if topbar then
         local logo = Instance.new("ImageButton")
         logo.Name = "CustomLogo"
@@ -371,31 +380,41 @@ pcall(function()
         logo.BackgroundTransparency = 1
         logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
         logo.ZIndex = 5
+        local uic = Instance.new("UICorner", logo)
+        uic.CornerRadius = UDim.new(1,0)
         logo.Parent = topbar
 
-        local titleLabel = Instance.new("TextLabel")
-        titleLabel.Name = "TripleSLabel"
-        titleLabel.Size = UDim2.new(0,100,0,20)
-        titleLabel.Position = UDim2.new(0,46,0.5,0)
-        titleLabel.AnchorPoint = Vector2.new(0,0.5)
-        titleLabel.BackgroundTransparency = 1
+        local titleLabel = topbar:FindFirstChild("TripleSLabel")
+        if not titleLabel then
+            titleLabel = Instance.new("TextLabel")
+            titleLabel.Name = "TripleSLabel"
+            titleLabel.Size = UDim2.new(0,100,0,20)
+            titleLabel.Position = UDim2.new(0,46,0.5,0)
+            titleLabel.AnchorPoint = Vector2.new(0,0.5)
+            titleLabel.BackgroundTransparency = 1
+            titleLabel.Font = Enum.Font.SourceSansSemibold
+            titleLabel.TextSize = 14
+            titleLabel.TextColor3 = Color3.fromRGB(220,220,220)
+            titleLabel.Parent = topbar
+        end
         titleLabel.Text = "TripleS"
-        titleLabel.Font = Enum.Font.SourceSansSemibold
-        titleLabel.TextSize = 14
-        titleLabel.TextColor3 = Color3.fromRGB(220,220,220)
-        titleLabel.Parent = topbar
 
-        local ver = Instance.new("TextLabel")
-        ver.Name = "VersionTag"
-        ver.Size = UDim2.new(0,58,0,18)
-        ver.AnchorPoint = Vector2.new(1,0.5)
-        ver.Position = UDim2.new(1,-52,0.5,0)
-        ver.BackgroundTransparency = 1
+        local ver = topbar:FindFirstChild("VersionTag")
+        if not ver then
+            ver = Instance.new("TextLabel")
+            ver.Name = "VersionTag"
+            ver.Size = UDim2.new(0,58,0,18)
+            ver.AnchorPoint = Vector2.new(1,0.5)
+            ver.Position = UDim2.new(1,-52,0.5,0)
+            ver.BackgroundTransparency = 1
+            ver.Font = Enum.Font.SourceSansSemibold
+            ver.TextSize = 12
+            ver.TextColor3 = Color3.fromRGB(200,200,200)
+            ver.Parent = topbar
+        end
         ver.Text = "v4.0"
-        ver.Font = Enum.Font.SourceSansSemibold
-        ver.TextSize = 12
-        ver.TextColor3 = Color3.fromRGB(200,200,200)
-        ver.Parent = topbar
+
+        local topbarBackup = {}
 
         logo.MouseButton1Click:Connect(function()
             pcall(function()
@@ -410,24 +429,34 @@ pcall(function()
         if Window.OnMinimize then
             Window.OnMinimize:Connect(function()
                 pcall(function()
-                    if titleLabel then titleLabel.Visible = false end
-                    if ver then ver.Visible = false end
-                    if logo then
-                        logo.Size = UDim2.fromOffset(32,32)
-                        logo.Position = UDim2.new(0,10,0.5,0)
+                    topbarBackup = {}
+                    for _,c in ipairs(topbar:GetChildren()) do
+                        if c ~= logo then
+                            local ok, vis = pcall(function() return c.Visible end)
+                            if ok then
+                                topbarBackup[c] = vis
+                                pcall(function() c.Visible = false end)
+                            else
+                                topbarBackup[c] = nil
+                                pcall(function() if c:IsA("GuiObject") then c.Visible = false end end)
+                            end
+                        end
                     end
+                    logo.Size = UDim2.fromOffset(32,32)
+                    logo.Position = UDim2.new(0,10,0.5,0)
                 end)
             end)
         end
         if Window.OnRestore then
             Window.OnRestore:Connect(function()
                 pcall(function()
-                    if titleLabel then titleLabel.Visible = true end
-                    if ver then ver.Visible = true end
-                    if logo then
-                        logo.Size = UDim2.fromOffset(32,32)
-                        logo.Position = UDim2.new(0,6,0.5,0)
+                    for c,vis in pairs(topbarBackup) do
+                        if typeof(c) == "Instance" then
+                            pcall(function() c.Visible = vis end)
+                        end
                     end
+                    logo.Size = UDim2.fromOffset(32,32)
+                    logo.Position = UDim2.new(0,6,0.5,0)
                 end)
             end)
         end
@@ -444,11 +473,11 @@ end)
 
 do
     local topPara = PlayerTab:Paragraph({ Title = LocalPlayer.Name, Desc = "Bio: Loading...", Image = "rbxasset://textures/ui/GuiImagePlaceholder.png", ImageSize = 56 })
-    task.spawn(function()
-        local okThumb, url = pcall(function() return Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100) end)
-        if okThumb and url and url ~= "" then pcall(function() topPara:SetImage(url) end) end
+    pcall(function()
+        local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(LocalPlayer.UserId).."&width=150&height=150&format=png"
+        pcall(function() topPara:SetImage(thumbUrl) end)
     end)
-    task.spawn(function()
+    pcall(function()
         local okDesc, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
         if okDesc and desc and desc ~= "" then pcall(function() topPara:SetDesc("Bio: "..desc) end) else pcall(function() topPara:SetDesc("Bio: No bio") end) end
     end)
