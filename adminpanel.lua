@@ -726,45 +726,24 @@ pcall(function()
         end
     end
     if topbar then
-        local logo = topbar:FindFirstChild("CustomLogo")
-        if not logo then
-            logo = Instance.new("ImageButton")
-            logo.Name = "CustomLogo"
-            logo.Size = UDim2.fromOffset(64,64)
-            logo.Position = UDim2.new(0,6,0.5,0)
-            logo.AnchorPoint = Vector2.new(0,0.5)
-            logo.BackgroundTransparency = 1
-            logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
-            logo.ZIndex = 50
-            local uic = Instance.new("UICorner")
-            uic.CornerRadius = UDim.new(1,0)
-            uic.Parent = logo
-            logo.Parent = topbar
-        else
-            logo.Size = UDim2.fromOffset(64,64)
-            if not logo:FindFirstChildOfClass("UICorner") then
-                local uic = Instance.new("UICorner")
-                uic.CornerRadius = UDim.new(1,0)
-                uic.Parent = logo
-            end
-        end
+        -- Remove old logos if any
+        local old = topbar:FindFirstChild("CustomLogo")
+        if old then old:Destroy() end
+        -- Create new logo
+        local logo = Instance.new("ImageButton")
+        logo.Name = "CustomLogo"
+        logo.Size = UDim2.fromOffset(64,64)
+        logo.Position = UDim2.new(0,6,0.5,0)
+        logo.AnchorPoint = Vector2.new(0,0.5)
+        logo.BackgroundTransparency = 1
+        logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
+        logo.ZIndex = 50
+        local uic = Instance.new("UICorner")
+        uic.CornerRadius = UDim.new(1,0)
+        uic.Parent = logo
+        logo.Parent = topbar
 
-        local titleLabel = topbar:FindFirstChild("TripleSLabel")
-        if titleLabel then titleLabel.Visible = true end
-        local ver = topbar:FindFirstChild("VersionTag")
-        if ver then ver.Visible = true end
-
-        local backup = {}
-        logo.MouseButton1Click:Connect(function()
-            pcall(function()
-                if Window.IsMinimized and Window:IsMinimized() then
-                    if Window.Restore then Window:Restore() end
-                else
-                    if Window.Minimize then Window:Minimize() end
-                end
-            end)
-        end)
-
+        -- Setup dragging
         local dragging = false
         local dragStart = Vector2.new(0,0)
         local frameStart = UDim2.new(0,0,0,0)
@@ -795,6 +774,19 @@ pcall(function()
             end
         end)
 
+        -- Toggle minimize/restore
+        logo.MouseButton1Click:Connect(function()
+            pcall(function()
+                if Window.IsMinimized and Window:IsMinimized() then
+                    if Window.Restore then Window:Restore() end
+                else
+                    if Window.Minimize then Window:Minimize() end
+                end
+            end)
+        end)
+
+        -- Minimize/restore handling
+        local backup = {}
         if Window.OnMinimize then
             Window.OnMinimize:Connect(function()
                 pcall(function()
