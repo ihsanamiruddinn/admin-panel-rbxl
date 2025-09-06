@@ -227,61 +227,78 @@ ExecTab:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Call
     end
 end })
 
-
--- Emotes Section (rebuilt with Dance Putar)
 local emotes = {
-    { Name = "wave" },
-    { Name = "point" },
-    { Name = "cheer" },
-    { Name = "laugh" },
-    { Name = "dance1" },
-    { Name = "dance2" },
-    { Name = "dance3" },
+    { Name = "ShuffleDance", Id = 116922444756066 },
+    { Name = "GangnamStyle", Id = 92286830656165 },
+    { Name = "Floss", Id = 5917570207 },
+    { Name = "Tornado", Id = 82995540773684 },
+    { Name = "Helicopter", Id = 110553756436163 },
+    { Name = "BreakDanceJDH", Id = 82426796437805 },
 }
-local currentEmote = nil
-local function stopCurrentEmote()
-    if currentEmote then
-        pcall(function() currentEmote:Stop() end)
-        currentEmote = nil
-    end
+
+-- REMOTE EVENT for server-side emotes
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local emoteEvent = ReplicatedStorage:FindFirstChild("EmoteEvent")
+if not emoteEvent then
+    emoteEvent = Instance.new("RemoteEvent")
+    emoteEvent.Name = "EmoteEvent"
+    emoteEvent.Parent = ReplicatedStorage
 end
+
 for _, e in ipairs(emotes) do
-    EmoteTab:Button({ Title = e.Name:gsub("^%l", string.upper), Icon = "music", Callback = function()
-        local hum = GetHumanoid()
-        if hum then
-            pcall(function()
-                local ok = hum:PlayEmote(e.Name)
-                if not ok then
-                    Notify({ Title = "Emote", Content = "Could not play "..e.Name, Duration = 2 })
-                end
-            end)
+    EmoteTab:Button({
+        Title = e.Name,
+        Icon = "music",
+        Callback = function()
+            emoteEvent:FireServer(e.Id)
         end
-    end })
+    })
 end
 
--- Custom Dance Putar (try multiple animation IDs)
-local spinIds = {507771019, 4212499637, 3716636630}
-EmoteTab:Button({ Title = "Dance Putar", Icon = "music", Callback = function()
-    stopCurrentEmote()
-    local hum = GetHumanoid()
-    if hum then
-        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-        for _, id in ipairs(spinIds) do
-            local anim = Instance.new("Animation")
-            anim.AnimationId = "rbxassetid://"..id
-            local track = animator:LoadAnimation(anim)
-            track.Priority = Enum.AnimationPriority.Action
-            track.Looped = true
-            track:Play()
-            currentEmote = track
-            break
-        end
-    end
-end })
+EmoteTab:Button({ 
+    Title = "Stop Emote", 
+    Icon = "x", 
+    Callback = function()
+        emoteEvent:FireServer("Stop")
+    end 
+})
 
-EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function()
-    stopCurrentEmote()
-end })
+-- Server-side script to handle emote playback
+if not game:IsClient() then
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local emoteEvent = ReplicatedStorage:WaitForChild("EmoteEvent")
+
+    emoteEvent.OnServerEvent:Connect(function(player, emoteId)
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+                
+                -- Stop any existing emotes
+                for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                    if track.Name == "AdminEmote" then
+                        track:Stop()
+                    end
+                end
+
+                if emoteId == "Stop" then
+                    return
+                end
+
+                local anim = Instance.new("Animation")
+                anim.AnimationId = "rbxassetid://"..tostring(emoteId)
+                local track = animator:LoadAnimation(anim)
+                track.Name = "AdminEmote"
+                track.Priority = Enum.AnimationPriority.Action
+                track.Looped = true
+                track:Play()
+            end
+        end
+    end)
+end
+
 
 AppearanceTab:Paragraph({ Title = "Customize Interface", Desc = "Theme & Transparency", Image = "palette", ImageSize = 20 })
 local themes = {}
