@@ -713,3 +713,80 @@ do
         Notify({ Title = "Freeze", Content = "Unfreeze attempted (client-side)", Duration = 2 })
     end })
 end
+
+-- PATCHED LOGO SECTION
+pcall(function()
+    local topbar = Window:GetMain():FindFirstChild("Topbar", true) or Window:GetTopbar()
+    if topbar then
+        local logo = topbar:FindFirstChild("CustomLogo")
+        if not logo then
+            logo = Instance.new("ImageButton")
+            logo.Name = "CustomLogo"
+            logo.Size = UDim2.fromOffset(32,32)
+            logo.Position = UDim2.new(0,6,0.5,0)
+            logo.AnchorPoint = Vector2.new(0,0.5)
+            logo.BackgroundTransparency = 1
+            logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
+            local uic = Instance.new("UICorner")
+            uic.CornerRadius = UDim.new(1,0)
+            uic.Parent = logo
+            logo.Parent = topbar
+        else
+            logo.Size = UDim2.fromOffset(32,32)
+            if not logo:FindFirstChildOfClass("UICorner") then
+                local uic = Instance.new("UICorner")
+                uic.CornerRadius = UDim.new(1,0)
+                uic.Parent = logo
+            end
+        end
+
+        -- Drag functionality moved to logo
+        local dragging = false
+        local dragInput, mousePos, framePos
+        logo.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                mousePos = input.Position
+                framePos = Window:GetMain().Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+        logo.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                dragInput = input
+            end
+        end)
+        game:GetService("UserInputService").InputChanged:Connect(function(input)
+            if input == dragInput and dragging then
+                local delta = input.Position - mousePos
+                Window:GetMain().Position = framePos + UDim2.fromOffset(delta.X, delta.Y)
+            end
+        end)
+
+        if Window.OnMinimize then
+            Window.OnMinimize:Connect(function()
+                for _,child in ipairs(topbar:GetChildren()) do
+                    if child ~= logo then
+                        child.Visible = false
+                    end
+                end
+                logo.Visible = true
+                logo.Size = UDim2.fromOffset(32,32)
+                logo.Position = UDim2.new(0,10,0.5,0)
+            end)
+        end
+        if Window.OnRestore then
+            Window.OnRestore:Connect(function()
+                for _,child in ipairs(topbar:GetChildren()) do
+                    child.Visible = true
+                end
+                logo.Size = UDim2.fromOffset(32,32)
+                logo.Position = UDim2.new(0,6,0.5,0)
+            end)
+        end
+    end
+end)
