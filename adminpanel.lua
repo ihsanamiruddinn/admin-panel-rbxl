@@ -714,25 +714,34 @@ do
     end })
 end
 
--- PATCHED LOGO SECTION
 pcall(function()
-    local topbar = Window:GetMain():FindFirstChild("Topbar", true) or Window:GetTopbar()
+    local topbar = nil
+    if Window.GetTopbar then
+        pcall(function() topbar = Window:GetTopbar() end)
+    end
+    if not topbar and Window.GetMain then
+        pcall(function() topbar = Window:GetMain():FindFirstChild("Topbar", true) end)
+        if not topbar then
+            pcall(function() topbar = Window:GetMain() end)
+        end
+    end
     if topbar then
         local logo = topbar:FindFirstChild("CustomLogo")
         if not logo then
             logo = Instance.new("ImageButton")
             logo.Name = "CustomLogo"
-            logo.Size = UDim2.fromOffset(32,32)
+            logo.Size = UDim2.fromOffset(64,64)
             logo.Position = UDim2.new(0,6,0.5,0)
             logo.AnchorPoint = Vector2.new(0,0.5)
             logo.BackgroundTransparency = 1
             logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
+            logo.ZIndex = 50
             local uic = Instance.new("UICorner")
             uic.CornerRadius = UDim.new(1,0)
             uic.Parent = logo
             logo.Parent = topbar
         else
-            logo.Size = UDim2.fromOffset(32,32)
+            logo.Size = UDim2.fromOffset(64,64)
             if not logo:FindFirstChildOfClass("UICorner") then
                 local uic = Instance.new("UICorner")
                 uic.CornerRadius = UDim.new(1,0)
@@ -740,52 +749,80 @@ pcall(function()
             end
         end
 
-        -- Drag functionality moved to logo
+        local titleLabel = topbar:FindFirstChild("TripleSLabel")
+        if titleLabel then titleLabel.Visible = true end
+        local ver = topbar:FindFirstChild("VersionTag")
+        if ver then ver.Visible = true end
+
+        local backup = {}
+        logo.MouseButton1Click:Connect(function()
+            pcall(function()
+                if Window.IsMinimized and Window:IsMinimized() then
+                    if Window.Restore then Window:Restore() end
+                else
+                    if Window.Minimize then Window:Minimize() end
+                end
+            end)
+        end)
+
         local dragging = false
-        local dragInput, mousePos, framePos
+        local dragStart = Vector2.new(0,0)
+        local frameStart = UDim2.new(0,0,0,0)
         logo.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = true
-                mousePos = input.Position
-                framePos = Window:GetMain().Position
+                dragStart = input.Position
+                local main = Window.GetMain and Window:GetMain()
+                if main then frameStart = main.Position end
                 input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then
-                        dragging = false
-                    end
+                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
                 end)
             end
         end)
+        local dragInput = nil
         logo.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then
-                dragInput = input
-            end
+            if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
         end)
-        game:GetService("UserInputService").InputChanged:Connect(function(input)
-            if input == dragInput and dragging then
-                local delta = input.Position - mousePos
-                Window:GetMain().Position = framePos + UDim2.fromOffset(delta.X, delta.Y)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input == dragInput then
+                local delta = input.Position - dragStart
+                local main = Window.GetMain and Window:GetMain()
+                if main then
+                    pcall(function()
+                        main.Position = frameStart + UDim2.fromOffset(delta.X, delta.Y)
+                    end)
+                end
             end
         end)
 
         if Window.OnMinimize then
             Window.OnMinimize:Connect(function()
-                for _,child in ipairs(topbar:GetChildren()) do
-                    if child ~= logo then
-                        child.Visible = false
+                pcall(function()
+                    backup = {}
+                    for _,c in ipairs(topbar:GetChildren()) do
+                        if c ~= logo then
+                            if c:IsA("GuiObject") then
+                                backup[c] = c.Visible
+                                c.Visible = false
+                            end
+                        end
                     end
-                end
-                logo.Visible = true
-                logo.Size = UDim2.fromOffset(32,32)
-                logo.Position = UDim2.new(0,10,0.5,0)
+                    logo.Size = UDim2.fromOffset(64,64)
+                    logo.Position = UDim2.new(0,10,0.5,0)
+                end)
             end)
         end
         if Window.OnRestore then
             Window.OnRestore:Connect(function()
-                for _,child in ipairs(topbar:GetChildren()) do
-                    child.Visible = true
-                end
-                logo.Size = UDim2.fromOffset(32,32)
-                logo.Position = UDim2.new(0,6,0.5,0)
+                pcall(function()
+                    for c,vis in pairs(backup) do
+                        if typeof(c) == "Instance" and c:IsA("GuiObject") then
+                            pcall(function() c.Visible = vis end)
+                        end
+                    end
+                    logo.Size = UDim2.fromOffset(64,64)
+                    logo.Position = UDim2.new(0,6,0.5,0)
+                end)
             end)
         end
     end
