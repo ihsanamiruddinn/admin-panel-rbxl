@@ -8,7 +8,13 @@ local ok, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/ihsanamiruddinn/TripleS-UI/main/dist/main.lua"))()
 end)
 if not ok or not WindUI then
-    pcall(function() game:GetService("StarterGui"):SetCore("SendNotification", { Title = "AdminPanel", Text = "Failed to load WindUI. Check HTTP.", Duration = 5 }) end)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "AdminPanel",
+            Text = "Failed to load WindUI. Check HTTP.",
+            Duration = 5
+        })
+    end)
     return
 end
 
@@ -111,6 +117,8 @@ local function executeCommandLine(txt)
     end
 end
 
+local dash = Window:Tag({ Title = "v4.0", Color = Color3.fromRGB(200,200,200) })
+
 local flyToggle = AdminTab:Toggle({ Title = "Fly", Value = false, Callback = function(v) state.fly = v Notify({ Title = "Fly", Content = v and "Enabled" or "Disabled", Duration = 2 }) end })
 local flingToggle = AdminTab:Toggle({ Title = "Fling", Value = false, Callback = function(v) state.fling = v Notify({ Title = "Fling", Content = v and "Enabled" or "Disabled", Duration = 2 }) end })
 local noclipToggle = AdminTab:Toggle({ Title = "Noclip", Value = false, Callback = function(v) state.noclip = v Notify({ Title = "Noclip", Content = v and "Enabled" or "Disabled", Duration = 2 }) end })
@@ -137,8 +145,8 @@ ExecTab:Button({ Title = "Rejoin", Icon = "corner-down-right", Callback = functi
 ExecTab:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Callback = function(v) state.autoRejoin = v if v then if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end state.autoRejoinConn = Players.PlayerRemoving:Connect(function(p) if p == LocalPlayer then pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end end) else if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end end end })
 
 local emotes = { { Name = "Dance 1" }, { Name = "Dance 2" }, { Name = "Dance Crazy" }, { Name = "Float Dance" }, { Name = "Freeze Fly" } }
-for _, e in ipairs(emotes) do EmoteTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name.." (placeholder)", Duration = 2 }) end }) end
-EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped (placeholder)", Duration = 2 }) end })
+for _, e in ipairs(emotes) do ExecTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name.." (placeholder)", Duration = 2 }) end }) end
+ExecTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped (placeholder)", Duration = 2 }) end })
 
 local themes = {}
 for name, _ in pairs(WindUI:GetThemes()) do table.insert(themes, name) end
@@ -263,17 +271,28 @@ local playerDropdown = PlayerTab:Dropdown({ Title = "Select Player", Values = {}
 
 local function refreshPlayerDropdown()
     local items = {}
-    for _,p in ipairs(Players:GetPlayers()) do table.insert(items, p.Name) end
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p and p.Name then table.insert(items, p.Name) end
+    end
     if #items == 0 then playerDropdown:SetValues({ "No players" }) else playerDropdown:SetValues(items) end
 end
 
 Players.PlayerAdded:Connect(refreshPlayerDropdown)
-Players.PlayerRemoving:Connect(refreshPlayerDropdown)
+Players.PlayerRemoving:Connect(function()
+    if state.selectedPlayerName then
+        local found = false
+        for _,p in ipairs(Players:GetPlayers()) do if p.Name == state.selectedPlayerName then found = true break end end
+        if not found then state.selectedPlayerName = nil end
+    end
+    refreshPlayerDropdown()
+end)
 refreshPlayerDropdown()
 
 task.spawn(function()
+    local fetched = false
     local ok, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
-    if ok and desc and desc ~= "" then pcall(function() avatarPara:SetDesc("Bio: "..desc) end) else pcall(function() avatarPara:SetDesc("Bio: No bio") end) end
+    if ok and desc and desc ~= "" then pcall(function() avatarPara:SetDesc("Bio: "..desc) end) fetched = true end
+    if not fetched then pcall(function() avatarPara:SetDesc("Bio: No bio") end) end
 end)
 
 local function getSelectedPlayer()
