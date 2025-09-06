@@ -404,12 +404,57 @@ do
         end
     end })
 
-    PlayerTab:Toggle({ Title = "HeadSit", Value = false, Callback = function(v)
+        PlayerTab:Toggle({ Title = "HeadSit", Value = false, Callback = function(v)
         if v then
             local t = state.selectedPlayer
             if not t or not t.Character then
-                PlayerTab:GetControls().children[#PlayerTab:GetControls().children-1]:Set(false)
                 Notify({ Title = "HeadSit", Content = "Player not available", Duration = 2 })
+                return
+            end
+            local targetHRP = t.Character:FindFirstChild("HumanoidRootPart")
+            local localHRP = GetHRPLocal()
+            if not targetHRP or not localHRP then
+                Notify({ Title = "HeadSit", Content = "HRP missing", Duration = 2 })
+                return
+            end
+            if state.headsitObjects then
+                for _,obj in ipairs(state.headsitObjects) do
+                    if typeof(obj) == "Instance" then obj:Destroy() end
+                end
+                state.headsitObjects = nil
+            end
+            local humanoid = GetHumanoid()
+            if humanoid then humanoid.PlatformStand = true end
+            local a0 = Instance.new("Attachment", localHRP)
+            local a1 = Instance.new("Attachment", targetHRP)
+            a1.Position = Vector3.new(0,2,1)
+            local ap = Instance.new("AlignPosition", localHRP)
+            ap.Attachment0 = a0
+            ap.Attachment1 = a1
+            ap.MaxForce = 9e9
+            ap.Responsiveness = 200
+            local ao = Instance.new("AlignOrientation", localHRP)
+            ao.Attachment0 = a0
+            ao.Attachment1 = a1
+            ao.MaxTorque = 9e9
+            ao.Responsiveness = 200
+            ao.RigidityEnabled = false
+            ao.CFrame = CFrame.Angles(0, math.rad(180), 0)
+            state.headsitObjects = {a0,a1,ap,ao,humanoid}
+            Notify({ Title = "HeadSit", Content = "Attached to "..t.Name, Duration = 2 })
+        else
+            if state.headsitObjects then
+                for _,obj in ipairs(state.headsitObjects) do
+                    if typeof(obj) == "Instance" then obj:Destroy() end
+                end
+                if state.headsitObjects[5] then
+                    state.headsitObjects[5].PlatformStand = false
+                end
+                state.headsitObjects = nil
+                Notify({ Title = "HeadSit", Content = "Removed", Duration = 2 })
+            end
+        end
+    end })
                 return
             end
             local targetHRP = t.Character:FindFirstChild("HumanoidRootPart")
