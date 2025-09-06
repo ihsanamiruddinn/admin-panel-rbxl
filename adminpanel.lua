@@ -141,12 +141,13 @@ AdminTab:Input({ Title = "Freeze Player", Placeholder = "Player name, press Ente
 AdminTab:Button({ Title = "Unfreeze All (client-side)", Callback = function() for _, p in pairs(Players:GetPlayers()) do if p.Character then for _, part in pairs(p.Character:GetDescendants()) do if part:IsA("BasePart") then part.Anchored = false end end end end Notify({ Title = "Freeze", Content = "Unfreeze attempted (client-side)", Duration = 2 }) end })
 
 ExecTab:Input({ Title = "Command Bar", Placeholder = "Type command and press Enter (no prefix)", Callback = function(txt) if not txt or txt == "" then return end executeCommandLine(txt) end })
+
 ExecTab:Button({ Title = "Rejoin", Icon = "corner-down-right", Callback = function() pcall(function() Notify({ Title = "Rejoin", Content = "Teleporting...", Duration = 2 }) TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end })
 ExecTab:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Callback = function(v) state.autoRejoin = v if v then if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end state.autoRejoinConn = Players.PlayerRemoving:Connect(function(p) if p == LocalPlayer then pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end end) else if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end end end })
 
 local emotes = { { Name = "Dance 1" }, { Name = "Dance 2" }, { Name = "Dance Crazy" }, { Name = "Float Dance" }, { Name = "Freeze Fly" } }
-for _, e in ipairs(emotes) do ExecTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name.." (placeholder)", Duration = 2 }) end }) end
-ExecTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped (placeholder)", Duration = 2 }) end })
+for _, e in ipairs(emotes) do EmoteTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name, Duration = 2 }) end }) end
+EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped", Duration = 2 }) end })
 
 local themes = {}
 for name, _ in pairs(WindUI:GetThemes()) do table.insert(themes, name) end
@@ -208,7 +209,6 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
-ExecTab:Paragraph({ Title = "Commands", Desc = "Available commands (dynamic)", Image = "list", ImageSize = 14 })
 local cmdListPara = ExecTab:Paragraph({ Title = "Command List", Desc = "", Image = "terminal", ImageSize = 12 })
 local function refreshCommandList()
     local merged = ""
@@ -268,6 +268,7 @@ end
 
 local avatarPara = PlayerTab:Paragraph({ Title = LocalPlayer.Name, Desc = "Bio: Loading...", Image = "user", ImageSize = 40 })
 local playerDropdown = PlayerTab:Dropdown({ Title = "Select Player", Values = {}, Value = nil, Callback = function(v) state.selectedPlayerName = v end })
+local playerInfoPara = PlayerTab:Paragraph({ Title = "Selected", Desc = "No player selected", Image = "user", ImageSize = 16 })
 
 local function refreshPlayerDropdown()
     local items = {}
@@ -275,14 +276,22 @@ local function refreshPlayerDropdown()
         if p and p.Name then table.insert(items, p.Name) end
     end
     if #items == 0 then playerDropdown:SetValues({ "No players" }) else playerDropdown:SetValues(items) end
+    local sel = state.selectedPlayerName
+    if sel then
+        local found = false
+        for _,n in ipairs(items) do if n == sel then found = true break end end
+        if not found then state.selectedPlayerName = nil playerInfoPara:SetDesc("No player selected") end
+    end
 end
 
-Players.PlayerAdded:Connect(refreshPlayerDropdown)
+Players.PlayerAdded:Connect(function()
+    refreshPlayerDropdown()
+end)
 Players.PlayerRemoving:Connect(function()
     if state.selectedPlayerName then
         local found = false
         for _,p in ipairs(Players:GetPlayers()) do if p.Name == state.selectedPlayerName then found = true break end end
-        if not found then state.selectedPlayerName = nil end
+        if not found then state.selectedPlayerName = nil playerInfoPara:SetDesc("No player selected") end
     end
     refreshPlayerDropdown()
 end)
