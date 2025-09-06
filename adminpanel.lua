@@ -65,7 +65,8 @@ local state = {
     listening = false,
     selectedPlayer = nil,
     targetName = "",
-    notifyAllowed = notifyAllowed,
+    headMotor = nil,
+    isSpectating = false,
 }
 
 local function GetCharacter()
@@ -75,11 +76,10 @@ local function GetHumanoid()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
-local function GetHRP(plr)
-    local char = plr and (plr.Character or plr.CharacterAdded:Wait()) or (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+local function GetHRPLocal()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     return char and char:FindFirstChild("HumanoidRootPart")
 end
-
 local function findPlayerByName(part)
     if not part or part == "" then return nil end
     part = part:lower()
@@ -94,13 +94,11 @@ end
 AdminTab:Toggle({ Title = "Fly", Value = false, Callback = function(v) state.fly = v Notify({ Title = "Fly", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
 AdminTab:Toggle({ Title = "Fling", Value = false, Callback = function(v) state.fling = v Notify({ Title = "Fling", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
 AdminTab:Toggle({ Title = "Noclip", Value = false, Callback = function(v) state.noclip = v Notify({ Title = "Noclip", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
-AdminTab:Toggle({ Title = "Anti-Fling", Value = false, Callback = function(v) state.antiFling = v if v then task.spawn(function() while state.antiFling do local hrp = GetHRP(LocalPlayer) if hrp and hrp.Velocity.Magnitude > 200 then hrp.Velocity = Vector3.new(0,0,0) end task.wait(0.1) end end) end Notify({ Title = "Anti-Fling", Content = v and "Enabled" or "Disabled", Duration = 2 }) end })
+AdminTab:Toggle({ Title = "Anti-Fling", Value = false, Callback = function(v) state.antiFling = v if v then task.spawn(function() while state.antiFling do local hrp = GetHRPLocal() if hrp and hrp.Velocity.Magnitude > 200 then hrp.Velocity = Vector3.new(0,0,0) end task.wait(0.1) end end) end Notify({ Title = "Anti-Fling", Content = v and "Enabled" or "Disabled", Duration = 2 }) end })
 AdminTab:Toggle({ Title = "Enable Speed (25)", Value = false, Callback = function(v) state.speedEnabled = v local hum = GetHumanoid() if hum then hum.WalkSpeed = v and state.speedValue or 16 end Notify({ Title = "Speed", Content = v and ("Enabled: "..state.speedValue) or "Disabled", Duration = 2 }) end })
 AdminTab:Button({ Title = "Increase Speed", Callback = function() state.speedValue = state.speedValue + 5 local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
 AdminTab:Button({ Title = "Decrease Speed", Callback = function() state.speedValue = math.max(0, state.speedValue - 5) local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
 
-local execSection = ExecTab
-local lastCommand = ""
 local Commands = {}
 Commands.fly = { run = function(args) state.fly = not state.fly local hum = GetHumanoid() if hum then hum.PlatformStand = false end end, desc = "Membuat player bisa terbang" }
 Commands.fling = { run = function(args) local targetName = args and args[1] or "" local target = findPlayerByName(targetName) if target and target.Character then local hrp = target.Character:FindFirstChild("HumanoidRootPart") if hrp then hrp.Velocity = Vector3.new(0,200,0) end end end, desc = "Membuat player lain terpental" }
@@ -124,7 +122,7 @@ local function executeCommandLine(txt)
     end
 end
 
-ExecTab:Input({ Title = "Command Bar", Placeholder = "Type command and press Enter (no prefix)", Callback = function(txt) if not txt or txt == "" then return end lastCommand = txt executeCommandLine(txt) end })
+ExecTab:Input({ Title = "Command Bar", Placeholder = "Type command and press Enter (no prefix)", Callback = function(txt) if not txt or txt == "" then return end executeCommandLine(txt) end })
 ExecTab:Button({ Title = "Rejoin", Icon = "corner-down-right", Callback = function() pcall(function() Notify({ Title = "Rejoin", Content = "Teleporting...", Duration = 2 }) TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end })
 ExecTab:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Callback = function(v) state.autoRejoin = v Notify({ Title = "AutoRejoin", Content = v and "Enabled" or "Disabled", Duration = 2 }) if v then if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end state.autoRejoinConn = Players.PlayerRemoving:Connect(function(p) if p == LocalPlayer then pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end end) else if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end end end })
 
@@ -219,7 +217,6 @@ do
         if okDesc and desc and desc ~= "" then pcall(function() topPara:SetDesc("Bio: "..desc) end) else pcall(function() topPara:SetDesc("Bio: No bio") end) end
     end)
 
-    local gotoInputText = ""
     local targetInputText = ""
 
     PlayerTab:Input({ Title = "Goto Part (type name and press Enter)", Placeholder = "Part name", Callback = function(txt)
@@ -228,7 +225,7 @@ do
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") and obj.Name:lower() == txt:lower() then found = obj break end
         end
-        local hrp = GetHRP(LocalPlayer)
+        local hrp = GetHRPLocal()
         if found and hrp then
             pcall(function() hrp.CFrame = found.CFrame + Vector3.new(0,3,0) end)
             Notify({ Title = "GotoPart", Content = "Moved to "..found.Name, Duration = 2 })
@@ -254,11 +251,103 @@ do
         if ok then return hrp end
         return nil
     end
+
     local function safeGetHeadFor(plr)
         if not plr then return nil end
         local ok, head = pcall(function() return plr.Character and plr.Character:FindFirstChild("Head") end)
         if ok then return head end
         return nil
+    end
+
+    local function createHUD()
+        local pg = LocalPlayer:FindFirstChild("PlayerGui")
+        if not pg then return end
+        local existing = pg:FindFirstChild("TripleS_HUD")
+        if existing then existing:Destroy() end
+        local screen = Instance.new("ScreenGui")
+        screen.Name = "TripleS_HUD"
+        screen.ResetOnSpawn = false
+        screen.Parent = pg
+
+        local unHead = Instance.new("ImageButton")
+        unHead.Name = "UnHeadBtn"
+        unHead.Size = UDim2.new(0,40,0,40)
+        unHead.Position = UDim2.new(1,-60,0.5,-60)
+        unHead.AnchorPoint = Vector2.new(0,0)
+        unHead.BackgroundTransparency = 0.8
+        unHead.AutoButtonColor = true
+        unHead.Text = ""
+        unHead.Image = ""
+        unHead.Parent = screen
+
+        local unHeadLbl = Instance.new("TextLabel")
+        unHeadLbl.Size = UDim2.new(1,0,1,0)
+        unHeadLbl.BackgroundTransparency = 1
+        unHeadLbl.Text = "🚫"
+        unHeadLbl.Font = Enum.Font.SourceSansBold
+        unHeadLbl.TextScaled = true
+        unHeadLbl.Parent = unHead
+
+        local unSpec = Instance.new("ImageButton")
+        unSpec.Name = "UnSpecBtn"
+        unSpec.Size = UDim2.new(0,40,0,40)
+        unSpec.Position = UDim2.new(1,-60,0.5,20)
+        unSpec.AnchorPoint = Vector2.new(0,0)
+        unSpec.BackgroundTransparency = 0.8
+        unSpec.AutoButtonColor = true
+        unSpec.Text = ""
+        unSpec.Image = ""
+        unSpec.Parent = screen
+
+        local unSpecLbl = Instance.new("TextLabel")
+        unSpecLbl.Size = UDim2.new(1,0,1,0)
+        unSpecLbl.BackgroundTransparency = 1
+        unSpecLbl.Text = "👁"
+        unSpecLbl.Font = Enum.Font.SourceSansBold
+        unSpecLbl.TextScaled = true
+        unSpecLbl.Parent = unSpec
+
+        unHead.Visible = false
+        unSpec.Visible = false
+
+        unHead.MouseButton1Click:Connect(function()
+            if state.headMotor then
+                pcall(function() state.headMotor:Destroy() end)
+                state.headMotor = nil
+            end
+            unHead.Visible = false
+        end)
+
+        unSpec.MouseButton1Click:Connect(function()
+            if state.isSpectating then
+                local humano = GetHumanoid()
+                if humano then
+                    workspace.CurrentCamera.CameraSubject = humano
+                    workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+                else
+                    workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+                end
+                state.isSpectating = false
+                unSpec.Visible = false
+            end
+        end)
+
+        return screen, unHead, unSpec
+    end
+
+    local hudScreen, hudUnHead, hudUnSpec = createHUD()
+
+    local function showUnHeadHUD()
+        if hudUnHead then hudUnHead.Visible = true end
+    end
+    local function hideUnHeadHUD()
+        if hudUnHead then hudUnHead.Visible = false end
+    end
+    local function showUnSpecHUD()
+        if hudUnSpec then hudUnSpec.Visible = true end
+    end
+    local function hideUnSpecHUD()
+        if hudUnSpec then hudUnSpec.Visible = false end
     end
 
     local function makeGridButton(title, icon, cb)
@@ -272,6 +361,8 @@ do
         if ok and hum then
             workspace.CurrentCamera.CameraSubject = hum
             workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+            state.isSpectating = true
+            showUnSpecHUD()
             Notify({ Title = "Spectate", Content = "Now spectating "..t.Name, Duration = 2 })
         else
             Notify({ Title = "Spectate", Content = "Target has no humanoid", Duration = 2 })
@@ -281,20 +372,30 @@ do
     makeGridButton("HeadSit", "user-check", function()
         local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
-        local head = safeGetHeadFor(t)
-        if head and LocalPlayer.Character then
-            pcall(function() LocalPlayer.Character:MoveTo(head.Position + Vector3.new(0,2,0)) end)
-            Notify({ Title = "HeadSit", Content = "Moved above "..t.Name, Duration = 2 })
-        else
-            Notify({ Title = "HeadSit", Content = "Cannot locate head or your character", Duration = 2 })
+        local targetHRP = safeGetHRPfor(t)
+        local localHRP = GetHRPLocal()
+        if not targetHRP or not localHRP then Notify({ Title = "HeadSit", Content = "HRP missing for target or you", Duration = 2 }) return end
+        if state.headMotor then
+            pcall(function() state.headMotor:Destroy() end)
+            state.headMotor = nil
         end
+        local motor = Instance.new("Motor6D")
+        motor.Name = "TripleS_Piggy"
+        motor.Part0 = targetHRP
+        motor.Part1 = localHRP
+        motor.C0 = CFrame.new(0,1.5,-2) * CFrame.Angles(0, math.rad(180), 0)
+        motor.C1 = CFrame.new(0,0,0)
+        motor.Parent = targetHRP
+        state.headMotor = motor
+        showUnHeadHUD()
+        Notify({ Title = "HeadSit", Content = "Piggyback attached to "..t.Name, Duration = 2 })
     end)
 
     makeGridButton("Teleport", "navigation", function()
         local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
         local thrp = safeGetHRPfor(t)
-        local hrp = safeGetHRPfor(LocalPlayer)
+        local hrp = GetHRPLocal()
         if thrp and hrp then
             pcall(function() hrp.CFrame = thrp.CFrame + Vector3.new(0,2,0) end)
             Notify({ Title = "Teleport", Content = "Teleported to "..t.Name, Duration = 2 })
@@ -305,7 +406,7 @@ do
 
     makeGridButton("Bring", "corner-down-right", function()
         local t = getTarget()
-        local hrp = safeGetHRPfor(LocalPlayer)
+        local hrp = GetHRPLocal()
         if not t or not hrp then Notify({ Title = "Bring", Content = "Missing selection or your HRP", Duration = 2 }) return end
         if t and t.Character then
             pcall(function() t.Character:MoveTo(hrp.Position + Vector3.new(0,2,0)) end)
@@ -337,6 +438,29 @@ do
             Notify({ Title = "Freeze", Content = "Anchored "..t.Name, Duration = 2 })
         end
     end)
+
+    PlayerTab:Button({ Title = "UnView", Icon = "eye-off", Callback = function()
+        if state.isSpectating then
+            local humano = GetHumanoid()
+            if humano then
+                workspace.CurrentCamera.CameraSubject = humano
+                workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+            else
+                workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+            end
+            state.isSpectating = false
+            hideUnSpecHUD()
+        end
+    end })
+
+    PlayerTab:Button({ Title = "UnHeadSit", Icon = "slash", Callback = function()
+        if state.headMotor then
+            pcall(function() state.headMotor:Destroy() end)
+            state.headMotor = nil
+            hideUnHeadHUD()
+            Notify({ Title = "HeadSit", Content = "Detached", Duration = 2 })
+        end
+    end })
 end
 
 pcall(function() if Window.UpdateTransparency then Window:UpdateTransparency() else Window:ToggleTransparency(WindUI.TransparencyValue > 0) end end)
