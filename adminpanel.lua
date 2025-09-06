@@ -76,12 +76,12 @@ local state = {
     autoRejoin = false,
     plugins = {},
     keybinds = {},
-    listening = false,
     selectedPlayer = nil,
-    headMotor = nil,
+    headConstraint = nil,
     isSpectating = false,
     fullbright = false,
     fbPrev = {},
+    autoRejoinConn = nil,
 }
 
 local function GetCharacter()
@@ -328,11 +328,11 @@ KeybindTab:Button({ Title = "Add Keybind", Icon = "plus", Callback = function()
     if not kc then Notify({ Title = "Keybind", Content = "Unknown key", Duration = 2 }) return end
     local action = string.lower(actionNameInput)
     local function callback()
-        if action == "fly" then AdminTab:GetControls().children[1]:Set(not AdminTab:GetControls().children[1]:Get()) end
-        if action == "noclip" then AdminTab:GetControls().children[3]:Set(not AdminTab:GetControls().children[3]:Get()) end
-        if action == "fling" then AdminTab:GetControls().children[2]:Set(not AdminTab:GetControls().children[2]:Get()) end
-        if action == "antifling" or action == "anti-fling" then AdminTab:GetControls().children[4]:Set(not AdminTab:GetControls().children[4]:Get()) end
-        if action == "speed" then AdminTab:GetControls().children[5]:Set(not AdminTab:GetControls().children[5]:Get()) end
+        if action == "fly" then state.fly = not state.fly end
+        if action == "noclip" then state.noclip = not state.noclip end
+        if action == "fling" then state.fling = not state.fling end
+        if action == "antifling" or action == "anti-fling" then state.antiFling = not state.antiFling end
+        if action == "speed" then state.speedEnabled = not state.speedEnabled local hum = GetHumanoid() if hum then hum.WalkSpeed = state.speedEnabled and state.speedValue or 16 end end
     end
     table.insert(state.keybinds, { name = actionNameInput, key = kc, callback = callback, enabled = true })
     Notify({ Title = "Keybind", Content = "Added "..actionNameInput.." on "..tostring(kc), Duration = 2 })
@@ -350,7 +350,6 @@ end)
 
 Window:OnClose(function()
     if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end
-    Notify({ Title = "AdminPanel", Content = "Closed", Duration = 2 })
 end)
 
 Window:OnDestroy(function()
@@ -468,23 +467,34 @@ do
                 Notify({ Title = "HeadSit", Content = "HRP missing", Duration = 2 })
                 return
             end
-            if state.headMotor then
-                pcall(function() for _,obj in ipairs(state.headMotor) do obj:Destroy() end end)
-                state.headMotor = nil
+            if state.headConstraint then
+                pcall(function()
+                    for _,obj in ipairs(state.headConstraint) do
+                        if typeof(obj) == "Instance" then obj:Destroy() end
+                    end
+                end)
+                state.headConstraint = nil
+            end
+            local humanoid = GetHumanoid()
+            if humanoid then
+                pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Physics) end)
             end
             local a0 = Instance.new("Attachment")
             a0.Name = "TripleS_Piggy_A0"
             a0.Parent = localHRP
-            a0.Position = Vector3.new(0,2,-1)
+            a0.Position = Vector3.new(0,1.5,0)
+            a0.Rotation = Vector3.new(0,0,0)
             local a1 = Instance.new("Attachment")
             a1.Name = "TripleS_Piggy_A1"
             a1.Parent = targetHRP
-            a1.Position = Vector3.new(0,0,0)
+            a1.Position = Vector3.new(0,1,-1.6)
+            a1.Rotation = Vector3.new(0,0,0)
             local alignPos = Instance.new("AlignPosition")
             alignPos.Name = "TripleS_Piggy_AP"
             alignPos.Attachment0 = a0
             alignPos.Attachment1 = a1
             alignPos.RigidityEnabled = true
+            alignPos.ApplyAtCenterOfMass = true
             alignPos.MaxForce = 9e9
             alignPos.Responsiveness = 200
             alignPos.MaxVelocity = math.huge
@@ -497,12 +507,35 @@ do
             alignOri.MaxTorque = 9e9
             alignOri.Responsiveness = 200
             alignOri.Parent = localHRP
-            state.headMotor = {a0,a1,alignPos,alignOri}
+            state.headConstraint = {a0, a1, alignPos, alignOri, humanoid, targetHRP}
             Notify({ Title = "HeadSit", Content = "Piggyback attached to "..t.Name, Duration = 2 })
+            task.spawn(function()
+                local last = 0
+                while state.headConstraint do
+                    local ok, alive = pcall(function() return state.headConstraint and state.headConstraint[6] and state.headConstraint[6].Parent end)
+                    if not ok or not alive then
+                        pcall(function()
+                            for _,obj in ipairs(state.headConstraint) do
+                                if typeof(obj) == "Instance" then obj:Destroy() end
+                            end
+                        end)
+                        state.headConstraint = nil
+                        break
+                    end
+                    task.wait(0.1)
+                end
+            end)
         else
-            if state.headMotor then
-                pcall(function() for _,obj in ipairs(state.headMotor) do obj:Destroy() end end)
-                state.headMotor = nil
+            if state.headConstraint then
+                pcall(function()
+                    for _,obj in ipairs(state.headConstraint) do
+                        if typeof(obj) == "Instance" then obj:Destroy() end
+                    end
+                end)
+                if state.headConstraint[5] then
+                    pcall(function() state.headConstraint[5]:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+                end
+                state.headConstraint = nil
             end
         end
     end })
@@ -549,5 +582,16 @@ do
             end
         end)
         Notify({ Title = "Freeze", Content = "Anchored "..t.Name, Duration = 2 })
+    end })
+
+    PlayerTab:Button({ Title = "Unfreeze All (client-side)", Callback = function()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character then
+                for _, part in pairs(p.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.Anchored = false end
+                end
+            end
+        end
+        Notify({ Title = "Freeze", Content = "Unfreeze attempted (client-side)", Duration = 2 })
     end })
 end
