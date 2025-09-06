@@ -57,9 +57,9 @@ local Features = Window:Section({ Title = "Features", Opened = true })
 local Settings = Window:Section({ Title = "Settings", Opened = true })
 local Utilities = Window:Section({ Title = "Utilities", Opened = true })
 
-local AdminTab = Features:Tab({ Title = "Admin", Icon = "shield", Desc = "Admin tools" })
-local ExecTab = Features:Tab({ Title = "Executor", Icon = "terminal", Desc = "Type commands and press Enter" })
-local EmoteTab = Features:Tab({ Title = "Emotes", Icon = "music", Desc = "Play emotes" })
+local AdminTab = Features:Tab({ Title = "Admin", Icon = "shield" })
+local ExecTab = Features:Tab({ Title = "Executor", Icon = "terminal" })
+local EmoteTab = Features:Tab({ Title = "Emotes", Icon = "music" })
 local AppearanceTab = Settings:Tab({ Title = "Appearance", Icon = "brush" })
 local ConfigTab = Utilities:Tab({ Title = "Configuration", Icon = "settings" })
 local PluginsTab = Utilities:Tab({ Title = "Plugins", Icon = "package" })
@@ -77,7 +77,7 @@ local state = {
     plugins = {},
     keybinds = {},
     selectedPlayer = nil,
-    headConstraint = nil,
+    headsitObjects = nil,
     isSpectating = false,
     fullbright = false,
     fbPrev = {},
@@ -105,54 +105,6 @@ local function findPlayerByName(part)
     end
     return nil
 end
-
-AdminTab:Toggle({ Title = "Fly", Value = false, Callback = function(v)
-    state.fly = v
-    Notify({ Title = "Fly", Content = v and "Enabled" or "Disabled", Duration = 2 })
-end })
-
-AdminTab:Toggle({ Title = "Fling", Value = false, Callback = function(v)
-    state.fling = v
-    Notify({ Title = "Fling", Content = v and "Enabled" or "Disabled", Duration = 2 })
-end })
-
-AdminTab:Toggle({ Title = "Noclip", Value = false, Callback = function(v)
-    state.noclip = v
-    Notify({ Title = "Noclip", Content = v and "Enabled" or "Disabled", Duration = 2 })
-end })
-
-AdminTab:Toggle({ Title = "Anti-Fling", Value = false, Callback = function(v)
-    state.antiFling = v
-    if v then
-        task.spawn(function()
-            while state.antiFling do
-                local hrp = GetHRPLocal()
-                if hrp and hrp.Velocity.Magnitude > 200 then
-                    hrp.Velocity = Vector3.new(0,0,0)
-                end
-                task.wait(0.1)
-            end
-        end)
-    end
-end })
-
-AdminTab:Toggle({ Title = "Enable Speed (25)", Value = false, Callback = function(v)
-    state.speedEnabled = v
-    local hum = GetHumanoid()
-    if hum then hum.WalkSpeed = v and state.speedValue or 16 end
-end })
-
-AdminTab:Button({ Title = "Increase Speed", Callback = function()
-    state.speedValue = state.speedValue + 5
-    local hum = GetHumanoid()
-    if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
-end })
-
-AdminTab:Button({ Title = "Decrease Speed", Callback = function()
-    state.speedValue = math.max(0, state.speedValue - 5)
-    local hum = GetHumanoid()
-    if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
-end })
 
 AdminTab:Toggle({ Title = "Fullbright", Value = false, Callback = function(v)
     if v then
@@ -467,30 +419,28 @@ do
                 Notify({ Title = "HeadSit", Content = "HRP missing", Duration = 2 })
                 return
             end
-            if state.headConstraint then
+            if state.headsitObjects then
                 pcall(function()
-                    for _,obj in ipairs(state.headConstraint) do
+                    for _,obj in ipairs(state.headsitObjects) do
                         if typeof(obj) == "Instance" then obj:Destroy() end
                     end
                 end)
-                state.headConstraint = nil
+                state.headsitObjects = nil
             end
             local humanoid = GetHumanoid()
             if humanoid then
                 pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Physics) end)
             end
             local a0 = Instance.new("Attachment")
-            a0.Name = "TripleS_Piggy_A0"
+            a0.Name = "IY_Headsit_A0"
             a0.Parent = localHRP
-            a0.Position = Vector3.new(0,1.5,0)
-            a0.Rotation = Vector3.new(0,0,0)
+            a0.Position = Vector3.new(0,0,0)
             local a1 = Instance.new("Attachment")
-            a1.Name = "TripleS_Piggy_A1"
+            a1.Name = "IY_Headsit_A1"
             a1.Parent = targetHRP
-            a1.Position = Vector3.new(0,1,-1.6)
-            a1.Rotation = Vector3.new(0,0,0)
+            a1.Position = Vector3.new(0,1.5,1)
             local alignPos = Instance.new("AlignPosition")
-            alignPos.Name = "TripleS_Piggy_AP"
+            alignPos.Name = "IY_Headsit_AP"
             alignPos.Attachment0 = a0
             alignPos.Attachment1 = a1
             alignPos.RigidityEnabled = true
@@ -500,43 +450,59 @@ do
             alignPos.MaxVelocity = math.huge
             alignPos.Parent = localHRP
             local alignOri = Instance.new("AlignOrientation")
-            alignOri.Name = "TripleS_Piggy_AO"
+            alignOri.Name = "IY_Headsit_AO"
             alignOri.Attachment0 = a0
             alignOri.Attachment1 = a1
             alignOri.RigidityEnabled = true
             alignOri.MaxTorque = 9e9
             alignOri.Responsiveness = 200
             alignOri.Parent = localHRP
-            state.headConstraint = {a0, a1, alignPos, alignOri, humanoid, targetHRP}
-            Notify({ Title = "HeadSit", Content = "Piggyback attached to "..t.Name, Duration = 2 })
+            state.headsitObjects = {a0,a1,alignPos,alignOri,humanoid,targetHRP}
+            Notify({ Title = "HeadSit", Content = "Attached to "..t.Name, Duration = 2 })
             task.spawn(function()
-                local last = 0
-                while state.headConstraint do
-                    local ok, alive = pcall(function() return state.headConstraint and state.headConstraint[6] and state.headConstraint[6].Parent end)
+                while state.headsitObjects do
+                    local ok,alive = pcall(function() return state.headsitObjects and state.headsitObjects[6] and state.headsitObjects[6].Parent end)
                     if not ok or not alive then
                         pcall(function()
-                            for _,obj in ipairs(state.headConstraint) do
+                            for _,obj in ipairs(state.headsitObjects) do
                                 if typeof(obj) == "Instance" then obj:Destroy() end
                             end
                         end)
-                        state.headConstraint = nil
+                        state.headsitObjects = nil
                         break
                     end
                     task.wait(0.1)
                 end
             end)
         else
-            if state.headConstraint then
+            if state.headsitObjects then
                 pcall(function()
-                    for _,obj in ipairs(state.headConstraint) do
+                    for _,obj in ipairs(state.headsitObjects) do
                         if typeof(obj) == "Instance" then obj:Destroy() end
                     end
                 end)
-                if state.headConstraint[5] then
-                    pcall(function() state.headConstraint[5]:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+                if state.headsitObjects[5] then
+                    pcall(function() state.headsitObjects[5]:ChangeState(Enum.HumanoidStateType.GettingUp) end)
                 end
-                state.headConstraint = nil
+                state.headsitObjects = nil
             end
+        end
+    end })
+
+    PlayerTab:Button({ Title = "UnHeadSit (Force Remove)", Callback = function()
+        if state.headsitObjects then
+            pcall(function()
+                for _,obj in ipairs(state.headsitObjects) do
+                    if typeof(obj) == "Instance" then obj:Destroy() end
+                end
+            end)
+            if state.headsitObjects[5] then
+                pcall(function() state.headsitObjects[5]:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+            end
+            state.headsitObjects = nil
+            Notify({ Title = "HeadSit", Content = "Removed", Duration = 2 })
+        else
+            Notify({ Title = "HeadSit", Content = "Not active", Duration = 2 })
         end
     end })
 
