@@ -227,56 +227,76 @@ ExecTab:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Call
     end
 end })
 
-local emotes = {
-    { Name = "Dance 1" },
-    { Name = "Dance 2" },
-    { Name = "Dance Crazy" },
-    { Name = "Float Dance" },
-    { Name = "Freeze Fly" },
-}
-for _, e in ipairs(emotes) do
-    EmoteTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name, Duration = 2 }) end })
-end
-EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped", Duration = 2 }) end })
 
-
-local emotes = {
-    { Name = "wave" },
-    { Name = "point" },
-    { Name = "cheer" },
-    { Name = "laugh" },
-    { Name = "dance" },
-    { Name = "dance2" },
-    { Name = "dance3" },
-}
-local currentEmote = nil
-local function stopCurrentEmote()
-    if currentEmote then pcall(function() currentEmote:Stop() end) currentEmote = nil end
-end
-for _, e in ipairs(emotes) do
-    EmoteTab:Button({ Title = e.Name:gsub("^%l", string.upper), Icon = "music", Callback = function()
+if not getgenv().TripleS_Emotes_Initialized then
+    getgenv().TripleS_Emotes_Initialized = true
+    local emotes = {
+        { Name = "wave" },
+        { Name = "point" },
+        { Name = "cheer" },
+        { Name = "laugh" },
+        { Name = "dance" },
+        { Name = "dance2" },
+        { Name = "dance3" },
+    }
+    local currentEmote = nil
+    local function stopCurrentEmote()
+        if currentEmote then
+            pcall(function() currentEmote:Stop() end)
+            currentEmote = nil
+        end
+    end
+    for _, e in ipairs(emotes) do
+        EmoteTab:Button({
+            Title = e.Name:gsub("^%l", string.upper),
+            Icon = "music",
+            Callback = function()
+                local hum = GetHumanoid()
+                if hum then
+                    local ok, res = pcall(function() return hum:PlayEmote(e.Name) end)
+                    if not ok or not res then
+                        Notify({ Title = "Emote", Content = "Emote not available: "..e.Name, Duration = 2 })
+                    end
+                end
+            end
+        })
+    end
+    local function tryPlayAnimIds(ids)
+        stopCurrentEmote()
         local hum = GetHumanoid()
-        if hum then
-            pcall(function() local ok = pcall(function() return hum:PlayEmote(e.Name) end) if not ok then Notify({ Title = "Emote", Content = "Could not play "..e.Name, Duration = 2 }) end end)
+        if not hum then return false end
+        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+        for _, id in ipairs(ids) do
+            local ok, track = pcall(function()
+                local anim = Instance.new("Animation")
+                anim.AnimationId = "rbxassetid://"..tostring(id)
+                local t = animator:LoadAnimation(anim)
+                t.Priority = Enum.AnimationPriority.Action
+                t.Looped = true
+                t:Play()
+                return t
+            end)
+            if ok and track then
+                currentEmote = track
+                return true
+            end
+        end
+        return false
+    end
+    EmoteTab:Button({ Title = "Dance Putar", Icon = "music", Callback = function()
+        local candidates = {5917459361, 5917459362, 5147695474, 5054663650, 5147488658}
+        local ok = tryPlayAnimIds(candidates)
+        if ok then
+            Notify({ Title = "Emote", Content = "Dance Putar Started", Duration = 2 })
+        else
+            Notify({ Title = "Emote", Content = "Dance Putar failed (no available anim)", Duration = 3 })
         end
     end })
+    EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function()
+        stopCurrentEmote()
+        Notify({ Title = "Emote", Content = "Stopped", Duration = 2 })
+    end })
 end
-local function playCustomAnimation(animId)
-    stopCurrentEmote()
-    local hum = GetHumanoid()
-    if hum then
-        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://"..tostring(animId)
-        local track = animator:LoadAnimation(anim)
-        track.Priority = Enum.AnimationPriority.Action
-        track.Looped = true
-        track:Play()
-        currentEmote = track
-    end
-end
-EmoteTab:Button({ Title = "Dance Putar", Icon = "music", Callback = function() playCustomAnimation(5917459361) end })
-EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() stopCurrentEmote() end })
 
 AppearanceTab:Paragraph({ Title = "Customize Interface", Desc = "Theme & Transparency", Image = "palette", ImageSize = 20 })
 local themes = {}
