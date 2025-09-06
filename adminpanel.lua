@@ -181,7 +181,7 @@ AdminTab:Toggle({ Title = "Fullbright", Value = false, Callback = function(v)
 end })
 
 local Commands = {}
-Commands.fly = { run = function(args) state.fly = not state.fly end, desc = "Membuat player bisa terbang" }
+Commands.fly = { run = function(args) state.fly = not state.fly local hum = GetHumanoid() if hum then hum.PlatformStand = false end end, desc = "Membuat player bisa terbang" }
 Commands.fling = { run = function(args) local targetName = args and args[1] or "" local target = findPlayerByName(targetName) if target and target.Character then local hrp = target.Character:FindFirstChild("HumanoidRootPart") if hrp then hrp.Velocity = Vector3.new(0,200,0) end end end, desc = "Membuat player lain terpental" }
 Commands.clip = { run = function(args) local hum = GetHumanoid() if hum and hum.Parent then for _,p in pairs(hum.Parent:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end end, desc = "Membuat player dapat menembus objek" }
 Commands.noclip = { run = function(args) state.noclip = not state.noclip end, desc = "Toggle noclip" }
@@ -469,21 +469,39 @@ do
                 return
             end
             if state.headMotor then
-                pcall(function() state.headMotor:Destroy() end)
+                pcall(function() for _,obj in ipairs(state.headMotor) do obj:Destroy() end end)
                 state.headMotor = nil
             end
-            local motor = Instance.new("Motor6D")
-            motor.Name = "TripleS_Piggy"
-            motor.Part0 = targetHRP
-            motor.Part1 = localHRP
-            motor.C0 = CFrame.new(0,1.5,-2) * CFrame.Angles(0, math.rad(180), 0)
-            motor.C1 = CFrame.new(0,0,0)
-            motor.Parent = targetHRP
-            state.headMotor = motor
+            local a0 = Instance.new("Attachment")
+            a0.Name = "TripleS_Piggy_A0"
+            a0.Parent = localHRP
+            a0.Position = Vector3.new(0,2,-1)
+            local a1 = Instance.new("Attachment")
+            a1.Name = "TripleS_Piggy_A1"
+            a1.Parent = targetHRP
+            a1.Position = Vector3.new(0,0,0)
+            local alignPos = Instance.new("AlignPosition")
+            alignPos.Name = "TripleS_Piggy_AP"
+            alignPos.Attachment0 = a0
+            alignPos.Attachment1 = a1
+            alignPos.RigidityEnabled = true
+            alignPos.MaxForce = 9e9
+            alignPos.Responsiveness = 200
+            alignPos.MaxVelocity = math.huge
+            alignPos.Parent = localHRP
+            local alignOri = Instance.new("AlignOrientation")
+            alignOri.Name = "TripleS_Piggy_AO"
+            alignOri.Attachment0 = a0
+            alignOri.Attachment1 = a1
+            alignOri.RigidityEnabled = true
+            alignOri.MaxTorque = 9e9
+            alignOri.Responsiveness = 200
+            alignOri.Parent = localHRP
+            state.headMotor = {a0,a1,alignPos,alignOri}
             Notify({ Title = "HeadSit", Content = "Piggyback attached to "..t.Name, Duration = 2 })
         else
             if state.headMotor then
-                pcall(function() state.headMotor:Destroy() end)
+                pcall(function() for _,obj in ipairs(state.headMotor) do obj:Destroy() end end)
                 state.headMotor = nil
             end
         end
