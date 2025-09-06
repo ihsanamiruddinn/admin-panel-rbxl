@@ -363,14 +363,27 @@ end)
 pcall(function()
     local topbar = Window:GetTopbar()
     if topbar then
-        local logo = Instance.new("ImageLabel")
+        local logo = Instance.new("ImageButton")
         logo.Name = "CustomLogo"
-        logo.Size = UDim2.fromOffset(18,18)
+        logo.Size = UDim2.fromOffset(32,32)
         logo.Position = UDim2.new(0,6,0.5,0)
         logo.AnchorPoint = Vector2.new(0,0.5)
         logo.BackgroundTransparency = 1
         logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
+        logo.ZIndex = 5
         logo.Parent = topbar
+
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Name = "TripleSLabel"
+        titleLabel.Size = UDim2.new(0,100,0,20)
+        titleLabel.Position = UDim2.new(0,46,0.5,0)
+        titleLabel.AnchorPoint = Vector2.new(0,0.5)
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Text = "TripleS"
+        titleLabel.Font = Enum.Font.SourceSansSemibold
+        titleLabel.TextSize = 14
+        titleLabel.TextColor3 = Color3.fromRGB(220,220,220)
+        titleLabel.Parent = topbar
 
         local ver = Instance.new("TextLabel")
         ver.Name = "VersionTag"
@@ -383,6 +396,41 @@ pcall(function()
         ver.TextSize = 12
         ver.TextColor3 = Color3.fromRGB(200,200,200)
         ver.Parent = topbar
+
+        logo.MouseButton1Click:Connect(function()
+            pcall(function()
+                if Window.IsMinimized and Window:IsMinimized() then
+                    if Window.Restore then Window:Restore() end
+                else
+                    if Window.Minimize then Window:Minimize() end
+                end
+            end)
+        end)
+
+        if Window.OnMinimize then
+            Window.OnMinimize:Connect(function()
+                pcall(function()
+                    if titleLabel then titleLabel.Visible = false end
+                    if ver then ver.Visible = false end
+                    if logo then
+                        logo.Size = UDim2.fromOffset(32,32)
+                        logo.Position = UDim2.new(0,10,0.5,0)
+                    end
+                end)
+            end)
+        end
+        if Window.OnRestore then
+            Window.OnRestore:Connect(function()
+                pcall(function()
+                    if titleLabel then titleLabel.Visible = true end
+                    if ver then ver.Visible = true end
+                    if logo then
+                        logo.Size = UDim2.fromOffset(32,32)
+                        logo.Position = UDim2.new(0,6,0.5,0)
+                    end
+                end)
+            end)
+        end
     end
 end)
 
