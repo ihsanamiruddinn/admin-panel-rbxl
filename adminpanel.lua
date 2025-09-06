@@ -368,22 +368,33 @@ pcall(function()
     if not topbar and Window.GetMain then
         pcall(function() topbar = Window:GetMain():FindFirstChild("Topbar", true) end)
         if not topbar then
+            pcall(function()
+    local topbar = nil
+    if Window.GetTopbar then
+        pcall(function() topbar = Window:GetTopbar() end)
+    end
+    if not topbar and Window.GetMain then
+        pcall(function() topbar = Window:GetMain():FindFirstChild("Topbar", true) end)
+        if not topbar then
             pcall(function() topbar = Window:GetMain() end)
         end
     end
     if topbar then
-        local logo = Instance.new("ImageButton")
-        logo.Name = "CustomLogo"
-        logo.Size = UDim2.fromOffset(32,32)
-        logo.Position = UDim2.new(0,6,0.5,0)
-        logo.AnchorPoint = Vector2.new(0,0.5)
-        logo.BackgroundTransparency = 1
-        logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
-        logo.ZIndex = 5
-        local uic = Instance.new("UICorner", logo)
-        uic.CornerRadius = UDim.new(1,0)
-        logo.Parent = topbar
-
+        local logo = topbar:FindFirstChild("CustomLogo")
+        if not logo then
+            logo = Instance.new("ImageButton")
+            logo.Name = "CustomLogo"
+            logo.Size = UDim2.fromOffset(32,32)
+            logo.Position = UDim2.new(0,6,0.5,0)
+            logo.AnchorPoint = Vector2.new(0,0.5)
+            logo.BackgroundTransparency = 1
+            logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
+            logo.ZIndex = 5
+            local uic = Instance.new("UICorner")
+            uic.CornerRadius = UDim.new(1,0)
+            uic.Parent = logo
+            logo.Parent = topbar
+        end
         local titleLabel = topbar:FindFirstChild("TripleSLabel")
         if not titleLabel then
             titleLabel = Instance.new("TextLabel")
@@ -398,7 +409,6 @@ pcall(function()
             titleLabel.Parent = topbar
         end
         titleLabel.Text = "TripleS"
-
         local ver = topbar:FindFirstChild("VersionTag")
         if not ver then
             ver = Instance.new("TextLabel")
@@ -413,9 +423,7 @@ pcall(function()
             ver.Parent = topbar
         end
         ver.Text = "v4.0"
-
-        local topbarBackup = {}
-
+        local backup = {}
         logo.MouseButton1Click:Connect(function()
             pcall(function()
                 if Window.IsMinimized and Window:IsMinimized() then
@@ -425,6 +433,39 @@ pcall(function()
                 end
             end)
         end)
+        if Window.OnMinimize then
+            Window.OnMinimize:Connect(function()
+                pcall(function()
+                    backup = {}
+                    for _,c in ipairs(topbar:GetChildren()) do
+                        if c ~= logo then
+                            if c:IsA("GuiObject") then
+                                backup[c] = c.Visible
+                                c.Visible = false
+                            end
+                        end
+                    end
+                    logo.Size = UDim2.fromOffset(32,32)
+                    logo.Position = UDim2.new(0,10,0.5,0)
+                end)
+            end)
+        end
+        if Window.OnRestore then
+            Window.OnRestore:Connect(function()
+                pcall(function()
+                    for c,vis in pairs(backup) do
+                        if typeof(c) == "Instance" and c:IsA("GuiObject") then
+                            pcall(function() c.Visible = vis end)
+                        end
+                    end
+                    logo.Size = UDim2.fromOffset(32,32)
+                    logo.Position = UDim2.new(0,6,0.5,0)
+                end)
+            end)
+        end
+    end
+end)
+        end
 
         if Window.OnMinimize then
             Window.OnMinimize:Connect(function()
