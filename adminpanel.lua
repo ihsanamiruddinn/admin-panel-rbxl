@@ -296,14 +296,15 @@ do
         local screen = Instance.new("ScreenGui")
         screen.Name = "TripleS_HUD"
         screen.ResetOnSpawn = false
+        screen.IgnoreGuiInset = true
         screen.Parent = pg
 
         local unHead = Instance.new("ImageButton")
         unHead.Name = "UnHeadBtn"
-        unHead.Size = UDim2.new(0,40,0,40)
-        unHead.Position = UDim2.new(1,-60,0.5,-60)
+        unHead.Size = UDim2.new(0,44,0,44)
+        unHead.Position = UDim2.new(1, -70, 0.5, -22)
         unHead.AnchorPoint = Vector2.new(0,0)
-        unHead.BackgroundTransparency = 0.8
+        unHead.BackgroundTransparency = 0.85
         unHead.AutoButtonColor = true
         unHead.Text = ""
         unHead.Image = ""
@@ -319,10 +320,10 @@ do
 
         local unSpec = Instance.new("ImageButton")
         unSpec.Name = "UnSpecBtn"
-        unSpec.Size = UDim2.new(0,40,0,40)
-        unSpec.Position = UDim2.new(1,-60,0.5,20)
+        unSpec.Size = UDim2.new(0,44,0,44)
+        unSpec.Position = UDim2.new(1, -70, 0.5, 28)
         unSpec.AnchorPoint = Vector2.new(0,0)
-        unSpec.BackgroundTransparency = 0.8
+        unSpec.BackgroundTransparency = 0.85
         unSpec.AutoButtonColor = true
         unSpec.Text = ""
         unSpec.Image = ""
