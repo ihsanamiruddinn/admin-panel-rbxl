@@ -714,168 +714,30 @@ do
     end })
 end
 
-local function safeGetHumanoid(player)
-    local char = player and player.Character
-    return char and char:FindFirstChildOfClass("Humanoid")
-end
-
-local function updateLocalPlayerHeader()
-    local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(LocalPlayer.UserId).."&width=150&height=150&format=png"
-    local display = "(Si Scripter)"
-    local titleText = LocalPlayer.Name
-    if display and display ~= "" and display ~= titleText then
-        titleText = titleText.." "..display
-    end
-    PlayerTab:Paragraph({ Title = titleText, Desc = "Bio: Loading...", Image = thumbUrl, ImageSize = 56 })
-    pcall(function()
-        local okDesc, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
-        if okDesc and desc and desc ~= "" then
-            for _,c in ipairs(PlayerTab:GetControls()) do
-                if c and c.SetDesc then
-                    pcall(function() c:SetDesc("Bio: "..desc) end)
-                    break
-                end
-            end
-        else
-            for _,c in ipairs(PlayerTab:GetControls()) do
-                if c and c.SetDesc then
-                    pcall(function() c:SetDesc("Bio: No bio") end)
-                    break
-                end
-            end
-        end
-    end)
-end
-
-local emoteIds = {
-    Wave = 507770239,
-    Cheer = 507770453,
-    Laugh = 507770818,
-    Dance1 = 507771019,
-    Dance2 = 507771955,
-    Dance3 = 507772104,
-    Point = 507770678
-}
-
-local currentEmoteTrack = nil
-
-local function playEmoteById(id)
-    local hum = GetHumanoid()
-    if not hum then return end
-    pcall(function()
-        if currentEmoteTrack then
-            currentEmoteTrack:Stop()
-            currentEmoteTrack = nil
-        end
-    end)
-    pcall(function()
-        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://"..tostring(id)
-        local track = animator:LoadAnimation(anim)
-        track.Priority = Enum.AnimationPriority.Action
-        track.Looped = true
-        track:Play()
-        currentEmoteTrack = track
-    end)
-end
-
-local function stopCurrentEmote()
-    if currentEmoteTrack then
-        pcall(function() currentEmoteTrack:Stop() end)
-        currentEmoteTrack = nil
+-- Clear old player info and rebuild proper header
+for _,c in ipairs(PlayerTab:GetControls()) do
+    if c and c.Title and tostring(c.Title) == LocalPlayer.Name then
+        if c.Destroy then pcall(function() c:Destroy() end) end
     end
 end
 
-pcall(function()
-    local buttons = {}
-    buttons["Wave"] = emoteIds.Wave
-    buttons["Cheer"] = emoteIds.Cheer
-    buttons["Laugh"] = emoteIds.Laugh
-    buttons["Dance 1"] = emoteIds.Dance1
-    buttons["Dance 2"] = emoteIds.Dance2
-    buttons["Dance 3"] = emoteIds.Dance3
-    buttons["Point"] = emoteIds.Point
-    for name,id in pairs(buttons) do
-        EmoteTab:Button({ Title = name, Icon = "music", Callback = function()
-            stopCurrentEmote()
-            playEmoteById(id)
-            Notify({ Title = "Emote", Content = name.." playing", Duration = 2 })
-        end })
+local displayName = LocalPlayer.DisplayName or LocalPlayer.Name
+local userName = LocalPlayer.Name
+local headerText = displayName.." (Scripter)"
+local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(LocalPlayer.UserId).."&width=150&height=150&format=png"
+
+local infoPara = PlayerTab:Paragraph({
+    Title = headerText,
+    Desc = "@"..userName.."\nBio: Loading...",
+    Image = thumbUrl,
+    ImageSize = 56
+})
+
+task.spawn(function()
+    local okDesc, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
+    if okDesc and desc and desc ~= "" then
+        pcall(function() infoPara:SetDesc("@"..userName.."\nBio: "..desc) end)
+    else
+        pcall(function() infoPara:SetDesc("@"..userName.."\nBio: No bio") end)
     end
-    EmoteTab:Button({ Title = "Stop Current Emote", Icon = "x", Callback = function()
-        stopCurrentEmote()
-        Notify({ Title = "Emote", Content = "Stopped", Duration = 2 })
-    end })
-end)
-
-pcall(function()
-    updateLocalPlayerHeader()
-end)
-
-pcall(function()
-    local function ensureButton(title, cb)
-        local found = false
-        for _,c in ipairs(PlayerTab:GetControls()) do
-            if c and c.Get and c.Title and tostring(c.Title) == title then found = true break end
-        end
-        if not found then
-            PlayerTab:Button({ Title = title, Callback = cb })
-        end
-    end
-
-    ensureButton("Teleport", function()
-        local t = state.selectedPlayer
-        if not t or not t.Character then Notify({ Title = "Teleport", Content = "No player selected", Duration = 2 }) return end
-        local thrp = t.Character:FindFirstChild("HumanoidRootPart")
-        local hrp = GetHRPLocal()
-        if thrp and hrp then
-            pcall(function() hrp.CFrame = thrp.CFrame + Vector3.new(0,2,0) end)
-            Notify({ Title = "Teleport", Content = "Teleported to "..t.Name, Duration = 2 })
-        else
-            Notify({ Title = "Teleport", Content = "HRP missing for target or you", Duration = 2 })
-        end
-    end)
-
-    ensureButton("Bring", function()
-        local t = state.selectedPlayer
-        local hrp = GetHRPLocal()
-        if not t or not t.Character or not hrp then Notify({ Title = "Bring", Content = "Missing selection or your HRP", Duration = 2 }) return end
-        pcall(function() t.Character:MoveTo(hrp.Position + Vector3.new(0,2,0)) end)
-        Notify({ Title = "Bring", Content = "Requested bring for "..t.Name, Duration = 2 })
-    end)
-
-    ensureButton("Fling", function()
-        local t = state.selectedPlayer
-        if not t or not t.Character then Notify({ Title = "Fling", Content = "No player selected", Duration = 2 }) return end
-        local thrp = t.Character:FindFirstChild("HumanoidRootPart")
-        if thrp then
-            pcall(function() thrp.Velocity = Vector3.new(0,500,0) end)
-            Notify({ Title = "Fling", Content = "Flinged "..t.Name, Duration = 2 })
-        else
-            Notify({ Title = "Fling", Content = "Target HRP not found", Duration = 2 })
-        end
-    end)
-
-    ensureButton("Freeze", function()
-        local t = state.selectedPlayer
-        if not t or not t.Character then Notify({ Title = "Freeze", Content = "No player selected", Duration = 2 }) return end
-        pcall(function()
-            for _, part in ipairs(t.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.Anchored = true end
-            end
-        end)
-        Notify({ Title = "Freeze", Content = "Anchored "..t.Name, Duration = 2 })
-    end)
-
-    ensureButton("Unfreeze All (client-side)", function()
-        for _, p in pairs(Players:GetPlayers()) do
-            if p.Character then
-                for _, part in pairs(p.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then part.Anchored = false end
-                end
-            end
-        end
-        Notify({ Title = "Freeze", Content = "Unfreeze attempted (client-side)", Duration = 2 })
-    end)
 end)
