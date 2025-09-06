@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
 local ok, WindUI = pcall(function()
@@ -67,6 +68,8 @@ local state = {
     targetName = "",
     headMotor = nil,
     isSpectating = false,
+    fullbright = false,
+    fbPrev = {},
 }
 
 local function GetCharacter()
@@ -98,6 +101,32 @@ AdminTab:Toggle({ Title = "Anti-Fling", Value = false, Callback = function(v) st
 AdminTab:Toggle({ Title = "Enable Speed (25)", Value = false, Callback = function(v) state.speedEnabled = v local hum = GetHumanoid() if hum then hum.WalkSpeed = v and state.speedValue or 16 end Notify({ Title = "Speed", Content = v and ("Enabled: "..state.speedValue) or "Disabled", Duration = 2 }) end })
 AdminTab:Button({ Title = "Increase Speed", Callback = function() state.speedValue = state.speedValue + 5 local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
 AdminTab:Button({ Title = "Decrease Speed", Callback = function() state.speedValue = math.max(0, state.speedValue - 5) local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
+
+AdminTab:Toggle({ Title = "Fullbright", Value = false, Callback = function(v)
+    if v then
+        state.fbPrev.Ambient = Lighting.Ambient
+        state.fbPrev.Brightness = Lighting.Brightness
+        state.fbPrev.ClockTime = Lighting.ClockTime
+        state.fbPrev.FogEnd = Lighting.FogEnd
+        pcall(function()
+            Lighting.Ambient = Color3.new(1,1,1)
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 12
+            Lighting.FogEnd = 100000
+        end)
+        state.fullbright = true
+        Notify({ Title = "Fullbright", Content = "Enabled", Duration = 2 })
+    else
+        pcall(function()
+            if state.fbPrev.Ambient then Lighting.Ambient = state.fbPrev.Ambient end
+            if state.fbPrev.Brightness then Lighting.Brightness = state.fbPrev.Brightness end
+            if state.fbPrev.ClockTime then Lighting.ClockTime = state.fbPrev.ClockTime end
+            if state.fbPrev.FogEnd then Lighting.FogEnd = state.fbPrev.FogEnd end
+        end)
+        state.fullbright = false
+        Notify({ Title = "Fullbright", Content = "Disabled", Duration = 2 })
+    end
+end })
 
 local Commands = {}
 Commands.fly = { run = function(args) state.fly = not state.fly local hum = GetHumanoid() if hum then hum.PlatformStand = false end end, desc = "Membuat player bisa terbang" }
@@ -315,7 +344,7 @@ do
                 pcall(function() state.headMotor:Destroy() end)
                 state.headMotor = nil
             end
-            unHead.Visible = false
+            if unHead then unHead.Visible = false end
         end)
 
         unSpec.MouseButton1Click:Connect(function()
@@ -328,7 +357,7 @@ do
                     workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
                 end
                 state.isSpectating = false
-                unSpec.Visible = false
+                if unSpec then unSpec.Visible = false end
             end
         end)
 
@@ -350,11 +379,7 @@ do
         if hudUnSpec then hudUnSpec.Visible = false end
     end
 
-    local function makeGridButton(title, icon, cb)
-        PlayerTab:Button({ Title = title, Icon = icon, Callback = cb })
-    end
-
-    makeGridButton("View", "eye", function()
+    PlayerTab:Button({ Title = "View", Icon = "eye", Callback = function()
         local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
         local ok, hum = pcall(function() return t.Character and t.Character:FindFirstChildOfClass("Humanoid") end)
@@ -367,9 +392,9 @@ do
         else
             Notify({ Title = "Spectate", Content = "Target has no humanoid", Duration = 2 })
         end
-    end)
+    end })
 
-    makeGridButton("HeadSit", "user-check", function()
+    PlayerTab:Button({ Title = "HeadSit", Icon = "user-check", Callback = function()
         local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
         local targetHRP = safeGetHRPfor(t)
@@ -389,9 +414,9 @@ do
         state.headMotor = motor
         showUnHeadHUD()
         Notify({ Title = "HeadSit", Content = "Piggyback attached to "..t.Name, Duration = 2 })
-    end)
+    end })
 
-    makeGridButton("Teleport", "navigation", function()
+    PlayerTab:Button({ Title = "Teleport", Icon = "navigation", Callback = function()
         local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
         local thrp = safeGetHRPfor(t)
@@ -402,9 +427,9 @@ do
         else
             Notify({ Title = "Teleport", Content = "HRP missing for target or you", Duration = 2 })
         end
-    end)
+    end })
 
-    makeGridButton("Bring", "corner-down-right", function()
+    PlayerTab:Button({ Title = "Bring", Icon = "corner-down-right", Callback = function()
         local t = getTarget()
         local hrp = GetHRPLocal()
         if not t or not hrp then Notify({ Title = "Bring", Content = "Missing selection or your HRP", Duration = 2 }) return end
@@ -412,9 +437,9 @@ do
             pcall(function() t.Character:MoveTo(hrp.Position + Vector3.new(0,2,0)) end)
             Notify({ Title = "Bring", Content = "Requested bring for "..t.Name, Duration = 2 })
         end
-    end)
+    end })
 
-    makeGridButton("Fling", "maximize", function()
+    PlayerTab:Button({ Title = "Fling", Icon = "maximize", Callback = function()
         local t = getTarget()
         if not t then Notify({ Title = "Fling", Content = "No player selected", Duration = 2 }) return end
         local thrp = safeGetHRPfor(t)
@@ -424,9 +449,9 @@ do
         else
             Notify({ Title = "Fling", Content = "Target HRP not found", Duration = 2 })
         end
-    end)
+    end })
 
-    makeGridButton("Freeze", "slash", function()
+    PlayerTab:Button({ Title = "Freeze", Icon = "slash", Callback = function()
         local t = getTarget()
         if not t then Notify({ Title = "Freeze", Content = "No player selected", Duration = 2 }) return end
         if t and t.Character then
@@ -437,7 +462,7 @@ do
             end)
             Notify({ Title = "Freeze", Content = "Anchored "..t.Name, Duration = 2 })
         end
-    end)
+    end })
 
     PlayerTab:Button({ Title = "UnView", Icon = "eye-off", Callback = function()
         if state.isSpectating then
