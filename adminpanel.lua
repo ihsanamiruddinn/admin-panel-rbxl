@@ -64,6 +64,8 @@ local state = {
     keybinds = {},
     listening = false,
     selectedPlayer = nil,
+    targetName = "",
+    notifyAllowed = notifyAllowed,
 }
 
 local function GetCharacter()
@@ -73,8 +75,8 @@ local function GetHumanoid()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
-local function GetHRP()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local function GetHRP(plr)
+    local char = plr and (plr.Character or plr.CharacterAdded:Wait()) or (LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
@@ -89,20 +91,16 @@ local function findPlayerByName(part)
     return nil
 end
 
-local adminSection = AdminTab:Section({ Title = "Player Controls", Icon = "user" })
+AdminTab:Toggle({ Title = "Fly", Value = false, Callback = function(v) state.fly = v Notify({ Title = "Fly", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
+AdminTab:Toggle({ Title = "Fling", Value = false, Callback = function(v) state.fling = v Notify({ Title = "Fling", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
+AdminTab:Toggle({ Title = "Noclip", Value = false, Callback = function(v) state.noclip = v Notify({ Title = "Noclip", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
+AdminTab:Toggle({ Title = "Anti-Fling", Value = false, Callback = function(v) state.antiFling = v if v then task.spawn(function() while state.antiFling do local hrp = GetHRP(LocalPlayer) if hrp and hrp.Velocity.Magnitude > 200 then hrp.Velocity = Vector3.new(0,0,0) end task.wait(0.1) end end) end Notify({ Title = "Anti-Fling", Content = v and "Enabled" or "Disabled", Duration = 2 }) end })
+AdminTab:Toggle({ Title = "Enable Speed (25)", Value = false, Callback = function(v) state.speedEnabled = v local hum = GetHumanoid() if hum then hum.WalkSpeed = v and state.speedValue or 16 end Notify({ Title = "Speed", Content = v and ("Enabled: "..state.speedValue) or "Disabled", Duration = 2 }) end })
+AdminTab:Button({ Title = "Increase Speed", Callback = function() state.speedValue = state.speedValue + 5 local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
+AdminTab:Button({ Title = "Decrease Speed", Callback = function() state.speedValue = math.max(0, state.speedValue - 5) local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
 
-local flyToggle = adminSection:Toggle({ Title = "Fly", Value = false, Callback = function(v) state.fly = v Notify({ Title = "Fly", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
-local flingToggle = adminSection:Toggle({ Title = "Fling", Value = false, Callback = function(v) state.fling = v Notify({ Title = "Fling", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
-local noclipToggle = adminSection:Toggle({ Title = "Noclip", Value = false, Callback = function(v) state.noclip = v Notify({ Title = "Noclip", Content = v and "Enabled (placeholder)" or "Disabled", Duration = 2 }) end })
-local antiFlingToggle = adminSection:Toggle({ Title = "Anti-Fling", Value = false, Callback = function(v) state.antiFling = v if v then task.spawn(function() while state.antiFling do local hrp = GetHRP() if hrp and hrp.Velocity.Magnitude > 200 then hrp.Velocity = Vector3.new(0,0,0) end task.wait(0.1) end end) end Notify({ Title = "Anti-Fling", Content = v and "Enabled" or "Disabled", Duration = 2 }) end })
-local speedToggle = adminSection:Toggle({ Title = "Enable Speed (25)", Value = false, Callback = function(v) state.speedEnabled = v local hum = GetHumanoid() if hum then hum.WalkSpeed = v and state.speedValue or 16 end Notify({ Title = "Speed", Content = v and ("Enabled: "..state.speedValue) or "Disabled", Duration = 2 }) end })
-
-adminSection:Button({ Title = "Increase Speed", Callback = function() state.speedValue = state.speedValue + 5 local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
-adminSection:Button({ Title = "Decrease Speed", Callback = function() state.speedValue = math.max(0, state.speedValue - 5) local hum = GetHumanoid() if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end Notify({ Title = "Speed", Content = "Speed set to "..state.speedValue, Duration = 2 }) end })
-
-local execSection = ExecTab:Section({ Title = "Executor", Icon = "terminal" })
+local execSection = ExecTab
 local lastCommand = ""
-
 local Commands = {}
 Commands.fly = { run = function(args) state.fly = not state.fly local hum = GetHumanoid() if hum then hum.PlatformStand = false end end, desc = "Membuat player bisa terbang" }
 Commands.fling = { run = function(args) local targetName = args and args[1] or "" local target = findPlayerByName(targetName) if target and target.Character then local hrp = target.Character:FindFirstChild("HumanoidRootPart") if hrp then hrp.Velocity = Vector3.new(0,200,0) end end end, desc = "Membuat player lain terpental" }
@@ -126,14 +124,13 @@ local function executeCommandLine(txt)
     end
 end
 
-execSection:Input({ Title = "Command Bar", Placeholder = "Type command and press Enter (no prefix)", Callback = function(txt) if not txt or txt == "" then return end lastCommand = txt executeCommandLine(txt) end })
-execSection:Button({ Title = "Rejoin", Icon = "corner-down-right", Callback = function() pcall(function() Notify({ Title = "Rejoin", Content = "Teleporting...", Duration = 2 }) TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end })
-execSection:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Callback = function(v) state.autoRejoin = v Notify({ Title = "AutoRejoin", Content = v and "Enabled" or "Disabled", Duration = 2 }) if v then if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end state.autoRejoinConn = Players.PlayerRemoving:Connect(function(p) if p == LocalPlayer then pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end end) else if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end end end })
+ExecTab:Input({ Title = "Command Bar", Placeholder = "Type command and press Enter (no prefix)", Callback = function(txt) if not txt or txt == "" then return end lastCommand = txt executeCommandLine(txt) end })
+ExecTab:Button({ Title = "Rejoin", Icon = "corner-down-right", Callback = function() pcall(function() Notify({ Title = "Rejoin", Content = "Teleporting...", Duration = 2 }) TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end })
+ExecTab:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Callback = function(v) state.autoRejoin = v Notify({ Title = "AutoRejoin", Content = v and "Enabled" or "Disabled", Duration = 2 }) if v then if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end state.autoRejoinConn = Players.PlayerRemoving:Connect(function(p) if p == LocalPlayer then pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end) end end) else if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end end end })
 
-local emoteSection = EmoteTab:Section({ Title = "Emotes", Icon = "music" })
 local emotes = { { Name = "Dance 1" }, { Name = "Dance 2" }, { Name = "Dance Crazy" }, { Name = "Float Dance" }, { Name = "Freeze Fly" } }
-for _, e in ipairs(emotes) do emoteSection:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name.." (placeholder)", Duration = 2 }) end }) end
-emoteSection:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped (placeholder)", Duration = 2 }) end })
+for _, e in ipairs(emotes) do EmoteTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name, Duration = 2 }) end }) end
+EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped", Duration = 2 }) end })
 
 AppearanceTab:Paragraph({ Title = "Customize Interface", Desc = "Theme & Transparency", Image = "palette", ImageSize = 20 })
 local themes = {}
@@ -210,156 +207,126 @@ pcall(function()
 end)
 
 do
-    local topSection = PlayerTab:Section({ Title = "Local Player", Icon = "user" })
+    local topPara = PlayerTab:Paragraph({ Title = LocalPlayer.Name, Desc = "Bio: Loading...", Image = "rbxasset://textures/ui/GuiImagePlaceholder.png", ImageSize = 56 })
     local thumbType = Enum.ThumbnailType.HeadShot
     local thumbSize = Enum.ThumbnailSize.Size100x100
-    local avatarUrl = nil
-    pcall(function()
-        avatarUrl = Players:GetUserThumbnailAsync(LocalPlayer.UserId, thumbType, thumbSize)
+    task.spawn(function()
+        local okThumb, url = pcall(function() return Players:GetUserThumbnailAsync(LocalPlayer.UserId, thumbType, thumbSize) end)
+        if okThumb and url and url ~= "" then pcall(function() topPara:SetImage(url) end) end
     end)
-    local bioText = "No bio"
     task.spawn(function()
         local okDesc, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
-        if okDesc and desc and desc ~= "" then bioText = desc else bioText = "No bio" end
-        pcall(function() topSection:Update(function() end) end)
+        if okDesc and desc and desc ~= "" then pcall(function() topPara:SetDesc("Bio: "..desc) end) else pcall(function() topPara:SetDesc("Bio: No bio") end) end
     end)
-    local localPara = topSection:Paragraph({ Title = LocalPlayer.Name, Desc = bioText, Image = avatarUrl or "rbxasset://textures/ui/GuiImagePlaceholder.png", ImageSize = 56 })
 
-    local listSection = PlayerTab:Section({ Title = "Players", Icon = "users" })
-    local actionsSection = PlayerTab:Section({ Title = "Actions", Icon = "zap" })
+    local gotoInputText = ""
+    local targetInputText = ""
 
-    local playersListDropdown = listSection:Dropdown({ Title = "Select Player", Values = {}, Value = nil, Callback = function(v)
-        if not v or v == "" then state.selectedPlayer = nil return end
+    PlayerTab:Input({ Title = "Goto Part (type name and press Enter)", Placeholder = "Part name", Callback = function(txt)
+        if not txt or txt == "" then Notify({ Title = "GotoPart", Content = "No part name", Duration = 2 }) return end
         local found = nil
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p.Name == v then found = p break end
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name:lower() == txt:lower() then found = obj break end
         end
-        state.selectedPlayer = found
+        local hrp = GetHRP(LocalPlayer)
+        if found and hrp then
+            pcall(function() hrp.CFrame = found.CFrame + Vector3.new(0,3,0) end)
+            Notify({ Title = "GotoPart", Content = "Moved to "..found.Name, Duration = 2 })
+        else
+            Notify({ Title = "GotoPart", Content = "Part not found or HRP missing", Duration = 2 })
+        end
     end })
 
-    local infoPara = listSection:Paragraph({ Title = "Selected", Desc = "No player selected", Image = "user", ImageSize = 16 })
+    PlayerTab:Input({ Title = "Target Player (type name)", Placeholder = "Player name", Callback = function(txt)
+        targetInputText = txt or ""
+        if not targetInputText or targetInputText == "" then state.selectedPlayer = nil return end
+        local target = findPlayerByName(targetInputText)
+        state.selectedPlayer = target
+    end })
 
-    local function refreshPlayers()
-        local names = {}
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p and p.Name then table.insert(names, p.Name) end
-        end
-        if #names == 0 then names = { LocalPlayer.Name } end
-        pcall(function() playersListDropdown:SetValues(names) end)
-        local sel = state.selectedPlayer and state.selectedPlayer.Name or nil
-        if sel then
-            local stillExists = false
-            for _,n in ipairs(names) do if n == sel then stillExists = true break end end
-            if not stillExists then
-                state.selectedPlayer = nil
-                pcall(function() infoPara:SetDesc("No player selected") end)
-            else
-                pcall(function() playersListDropdown:SetValue(sel) end)
-                pcall(function() infoPara:SetDesc("Selected: "..sel) end)
-            end
-        else
-            pcall(function() playersListDropdown:SetValue(nil) end)
-            pcall(function() infoPara:SetDesc("No player selected") end)
-        end
-        pcall(function() localPara:SetDesc(bioText) end)
-        if avatarUrl then pcall(function() localPara:SetImage(avatarUrl) end) end
-    end
-
-    Players.PlayerAdded:Connect(function() refreshPlayers() end)
-    Players.PlayerRemoving:Connect(function(plr)
-        if state.selectedPlayer and state.selectedPlayer == plr then
-            state.selectedPlayer = nil
-            pcall(function() infoPara:SetDesc("No player selected") end)
-        end
-        refreshPlayers()
-    end)
-    refreshPlayers()
-
-    local function getSelected()
+    local function getTarget()
         return state.selectedPlayer
     end
 
-    local function safeGetHRP(plr)
+    local function safeGetHRPfor(plr)
         if not plr then return nil end
-        local ok, hrp = pcall(function() return (plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")) end)
+        local ok, hrp = pcall(function() return plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") end)
         if ok then return hrp end
         return nil
     end
-
-    local function safeGetHead(plr)
+    local function safeGetHeadFor(plr)
         if not plr then return nil end
-        local ok, head = pcall(function() return (plr.Character and plr.Character:FindFirstChild("Head")) end)
+        local ok, head = pcall(function() return plr.Character and plr.Character:FindFirstChild("Head") end)
         if ok then return head end
         return nil
     end
 
-    actionsSection:Button({ Title = "View", Icon = "eye", Callback = function()
-        local t = getSelected()
+    local function makeGridButton(title, icon, cb)
+        PlayerTab:Button({ Title = title, Icon = icon, Callback = cb })
+    end
+
+    makeGridButton("View", "eye", function()
+        local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
         local ok, hum = pcall(function() return t.Character and t.Character:FindFirstChildOfClass("Humanoid") end)
         if ok and hum then
             workspace.CurrentCamera.CameraSubject = hum
             workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
             Notify({ Title = "Spectate", Content = "Now spectating "..t.Name, Duration = 2 })
-            pcall(function() infoPara:SetDesc("Selected: "..t.Name.." (Spectating)") end)
         else
             Notify({ Title = "Spectate", Content = "Target has no humanoid", Duration = 2 })
         end
-    end })
+    end)
 
-    actionsSection:Button({ Title = "HeadSit", Icon = "user-check", Callback = function()
-        local t = getSelected()
+    makeGridButton("HeadSit", "user-check", function()
+        local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
-        local head = safeGetHead(t)
+        local head = safeGetHeadFor(t)
         if head and LocalPlayer.Character then
             pcall(function() LocalPlayer.Character:MoveTo(head.Position + Vector3.new(0,2,0)) end)
             Notify({ Title = "HeadSit", Content = "Moved above "..t.Name, Duration = 2 })
-            pcall(function() infoPara:SetDesc("Selected: "..t.Name.." (HeadSit)") end)
         else
             Notify({ Title = "HeadSit", Content = "Cannot locate head or your character", Duration = 2 })
         end
-    end })
+    end)
 
-    actionsSection:Button({ Title = "Teleport", Icon = "navigation", Callback = function()
-        local t = getSelected()
+    makeGridButton("Teleport", "navigation", function()
+        local t = getTarget()
         if not t then Notify({ Title = "Player", Content = "No player selected", Duration = 2 }) return end
-        local thrp = safeGetHRP(t)
-        local hrp = safeGetHRP(LocalPlayer)
+        local thrp = safeGetHRPfor(t)
+        local hrp = safeGetHRPfor(LocalPlayer)
         if thrp and hrp then
             pcall(function() hrp.CFrame = thrp.CFrame + Vector3.new(0,2,0) end)
             Notify({ Title = "Teleport", Content = "Teleported to "..t.Name, Duration = 2 })
-            pcall(function() infoPara:SetDesc("Selected: "..t.Name.." (Teleported)") end)
         else
             Notify({ Title = "Teleport", Content = "HRP missing for target or you", Duration = 2 })
         end
-    end })
+    end)
 
-    actionsSection:Button({ Title = "Bring", Icon = "corner-down-right", Callback = function()
-        local t = getSelected()
-        local hrp = safeGetHRP(LocalPlayer)
+    makeGridButton("Bring", "corner-down-right", function()
+        local t = getTarget()
+        local hrp = safeGetHRPfor(LocalPlayer)
         if not t or not hrp then Notify({ Title = "Bring", Content = "Missing selection or your HRP", Duration = 2 }) return end
         if t and t.Character then
             pcall(function() t.Character:MoveTo(hrp.Position + Vector3.new(0,2,0)) end)
             Notify({ Title = "Bring", Content = "Requested bring for "..t.Name, Duration = 2 })
-            pcall(function() infoPara:SetDesc("Selected: "..t.Name.." (Bring requested)") end)
         end
-    end })
+    end)
 
-    actionsSection:Button({ Title = "Fling", Icon = "maximize", Callback = function()
-        local t = getSelected()
+    makeGridButton("Fling", "maximize", function()
+        local t = getTarget()
         if not t then Notify({ Title = "Fling", Content = "No player selected", Duration = 2 }) return end
-        local thrp = safeGetHRP(t)
+        local thrp = safeGetHRPfor(t)
         if thrp then
             pcall(function() thrp.Velocity = Vector3.new(0,500,0) end)
             Notify({ Title = "Fling", Content = "Flinged "..t.Name, Duration = 2 })
-            pcall(function() infoPara:SetDesc("Selected: "..t.Name.." (Fling)") end)
         else
             Notify({ Title = "Fling", Content = "Target HRP not found", Duration = 2 })
         end
-    end })
+    end)
 
-    actionsSection:Button({ Title = "Freeze", Icon = "slash", Callback = function()
-        local t = getSelected()
+    makeGridButton("Freeze", "slash", function()
+        local t = getTarget()
         if not t then Notify({ Title = "Freeze", Content = "No player selected", Duration = 2 }) return end
         if t and t.Character then
             pcall(function()
@@ -368,9 +335,8 @@ do
                 end
             end)
             Notify({ Title = "Freeze", Content = "Anchored "..t.Name, Duration = 2 })
-            pcall(function() infoPara:SetDesc("Selected: "..t.Name.." (Frozen)") end)
         end
-    end })
+    end)
 end
 
 pcall(function() if Window.UpdateTransparency then Window:UpdateTransparency() else Window:ToggleTransparency(WindUI.TransparencyValue > 0) end end)
