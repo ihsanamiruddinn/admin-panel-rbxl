@@ -57,9 +57,9 @@ local Features = Window:Section({ Title = "Features", Opened = true })
 local Settings = Window:Section({ Title = "Settings", Opened = true })
 local Utilities = Window:Section({ Title = "Utilities", Opened = true })
 
-local AdminTab = Features:Tab({ Title = "Admin", Icon = "shield" })
-local ExecTab = Features:Tab({ Title = "Executor", Icon = "terminal" })
-local EmoteTab = Features:Tab({ Title = "Emotes", Icon = "music" })
+local AdminTab = Features:Tab({ Title = "Admin", Icon = "shield", Desc = "Admin tools" })
+local ExecTab = Features:Tab({ Title = "Executor", Icon = "terminal", Desc = "Type commands and press Enter" })
+local EmoteTab = Features:Tab({ Title = "Emotes", Icon = "music", Desc = "Play emotes" })
 local AppearanceTab = Settings:Tab({ Title = "Appearance", Icon = "brush" })
 local ConfigTab = Utilities:Tab({ Title = "Configuration", Icon = "settings" })
 local PluginsTab = Utilities:Tab({ Title = "Plugins", Icon = "package" })
@@ -77,7 +77,7 @@ local state = {
     plugins = {},
     keybinds = {},
     selectedPlayer = nil,
-    headsitObjects = nil,
+    headConstraint = nil,
     isSpectating = false,
     fullbright = false,
     fbPrev = {},
@@ -105,6 +105,54 @@ local function findPlayerByName(part)
     end
     return nil
 end
+
+AdminTab:Toggle({ Title = "Fly", Value = false, Callback = function(v)
+    state.fly = v
+    Notify({ Title = "Fly", Content = v and "Enabled" or "Disabled", Duration = 2 })
+end })
+
+AdminTab:Toggle({ Title = "Fling", Value = false, Callback = function(v)
+    state.fling = v
+    Notify({ Title = "Fling", Content = v and "Enabled" or "Disabled", Duration = 2 })
+end })
+
+AdminTab:Toggle({ Title = "Noclip", Value = false, Callback = function(v)
+    state.noclip = v
+    Notify({ Title = "Noclip", Content = v and "Enabled" or "Disabled", Duration = 2 })
+end })
+
+AdminTab:Toggle({ Title = "Anti-Fling", Value = false, Callback = function(v)
+    state.antiFling = v
+    if v then
+        task.spawn(function()
+            while state.antiFling do
+                local hrp = GetHRPLocal()
+                if hrp and hrp.Velocity.Magnitude > 200 then
+                    hrp.Velocity = Vector3.new(0,0,0)
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end })
+
+AdminTab:Toggle({ Title = "Enable Speed (25)", Value = false, Callback = function(v)
+    state.speedEnabled = v
+    local hum = GetHumanoid()
+    if hum then hum.WalkSpeed = v and state.speedValue or 16 end
+end })
+
+AdminTab:Button({ Title = "Increase Speed", Callback = function()
+    state.speedValue = state.speedValue + 5
+    local hum = GetHumanoid()
+    if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
+end })
+
+AdminTab:Button({ Title = "Decrease Speed", Callback = function()
+    state.speedValue = math.max(0, state.speedValue - 5)
+    local hum = GetHumanoid()
+    if hum and state.speedEnabled then hum.WalkSpeed = state.speedValue end
+end })
 
 AdminTab:Toggle({ Title = "Fullbright", Value = false, Callback = function(v)
     if v then
@@ -404,57 +452,12 @@ do
         end
     end })
 
-        PlayerTab:Toggle({ Title = "HeadSit", Value = false, Callback = function(v)
+    PlayerTab:Toggle({ Title = "HeadSit", Value = false, Callback = function(v)
         if v then
             local t = state.selectedPlayer
             if not t or not t.Character then
+                PlayerTab:GetControls().children[#PlayerTab:GetControls().children-1]:Set(false)
                 Notify({ Title = "HeadSit", Content = "Player not available", Duration = 2 })
-                return
-            end
-            local targetHRP = t.Character:FindFirstChild("HumanoidRootPart")
-            local localHRP = GetHRPLocal()
-            if not targetHRP or not localHRP then
-                Notify({ Title = "HeadSit", Content = "HRP missing", Duration = 2 })
-                return
-            end
-            if state.headsitObjects then
-                for _,obj in ipairs(state.headsitObjects) do
-                    if typeof(obj) == "Instance" then obj:Destroy() end
-                end
-                state.headsitObjects = nil
-            end
-            local humanoid = GetHumanoid()
-            if humanoid then humanoid.PlatformStand = true end
-            local a0 = Instance.new("Attachment", localHRP)
-            local a1 = Instance.new("Attachment", targetHRP)
-            a1.Position = Vector3.new(0,2,1)
-            local ap = Instance.new("AlignPosition", localHRP)
-            ap.Attachment0 = a0
-            ap.Attachment1 = a1
-            ap.MaxForce = 9e9
-            ap.Responsiveness = 200
-            local ao = Instance.new("AlignOrientation", localHRP)
-            ao.Attachment0 = a0
-            ao.Attachment1 = a1
-            ao.MaxTorque = 9e9
-            ao.Responsiveness = 200
-            ao.RigidityEnabled = false
-            ao.CFrame = CFrame.Angles(0, math.rad(180), 0)
-            state.headsitObjects = {a0,a1,ap,ao,humanoid}
-            Notify({ Title = "HeadSit", Content = "Attached to "..t.Name, Duration = 2 })
-        else
-            if state.headsitObjects then
-                for _,obj in ipairs(state.headsitObjects) do
-                    if typeof(obj) == "Instance" then obj:Destroy() end
-                end
-                if state.headsitObjects[5] then
-                    state.headsitObjects[5].PlatformStand = false
-                end
-                state.headsitObjects = nil
-                Notify({ Title = "HeadSit", Content = "Removed", Duration = 2 })
-            end
-        end
-    end })
                 return
             end
             local targetHRP = t.Character:FindFirstChild("HumanoidRootPart")
@@ -464,28 +467,30 @@ do
                 Notify({ Title = "HeadSit", Content = "HRP missing", Duration = 2 })
                 return
             end
-            if state.headsitObjects then
+            if state.headConstraint then
                 pcall(function()
-                    for _,obj in ipairs(state.headsitObjects) do
+                    for _,obj in ipairs(state.headConstraint) do
                         if typeof(obj) == "Instance" then obj:Destroy() end
                     end
                 end)
-                state.headsitObjects = nil
+                state.headConstraint = nil
             end
             local humanoid = GetHumanoid()
             if humanoid then
                 pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Physics) end)
             end
             local a0 = Instance.new("Attachment")
-            a0.Name = "IY_Headsit_A0"
+            a0.Name = "TripleS_Piggy_A0"
             a0.Parent = localHRP
-            a0.Position = Vector3.new(0,0,0)
+            a0.Position = Vector3.new(0,1.5,0)
+            a0.Rotation = Vector3.new(0,0,0)
             local a1 = Instance.new("Attachment")
-            a1.Name = "IY_Headsit_A1"
+            a1.Name = "TripleS_Piggy_A1"
             a1.Parent = targetHRP
-            a1.Position = Vector3.new(0,1.5,1)
+            a1.Position = Vector3.new(0,1,-1.6)
+            a1.Rotation = Vector3.new(0,0,0)
             local alignPos = Instance.new("AlignPosition")
-            alignPos.Name = "IY_Headsit_AP"
+            alignPos.Name = "TripleS_Piggy_AP"
             alignPos.Attachment0 = a0
             alignPos.Attachment1 = a1
             alignPos.RigidityEnabled = true
@@ -495,59 +500,43 @@ do
             alignPos.MaxVelocity = math.huge
             alignPos.Parent = localHRP
             local alignOri = Instance.new("AlignOrientation")
-            alignOri.Name = "IY_Headsit_AO"
+            alignOri.Name = "TripleS_Piggy_AO"
             alignOri.Attachment0 = a0
             alignOri.Attachment1 = a1
             alignOri.RigidityEnabled = true
             alignOri.MaxTorque = 9e9
             alignOri.Responsiveness = 200
             alignOri.Parent = localHRP
-            state.headsitObjects = {a0,a1,alignPos,alignOri,humanoid,targetHRP}
-            Notify({ Title = "HeadSit", Content = "Attached to "..t.Name, Duration = 2 })
+            state.headConstraint = {a0, a1, alignPos, alignOri, humanoid, targetHRP}
+            Notify({ Title = "HeadSit", Content = "Piggyback attached to "..t.Name, Duration = 2 })
             task.spawn(function()
-                while state.headsitObjects do
-                    local ok,alive = pcall(function() return state.headsitObjects and state.headsitObjects[6] and state.headsitObjects[6].Parent end)
+                local last = 0
+                while state.headConstraint do
+                    local ok, alive = pcall(function() return state.headConstraint and state.headConstraint[6] and state.headConstraint[6].Parent end)
                     if not ok or not alive then
                         pcall(function()
-                            for _,obj in ipairs(state.headsitObjects) do
+                            for _,obj in ipairs(state.headConstraint) do
                                 if typeof(obj) == "Instance" then obj:Destroy() end
                             end
                         end)
-                        state.headsitObjects = nil
+                        state.headConstraint = nil
                         break
                     end
                     task.wait(0.1)
                 end
             end)
         else
-            if state.headsitObjects then
+            if state.headConstraint then
                 pcall(function()
-                    for _,obj in ipairs(state.headsitObjects) do
+                    for _,obj in ipairs(state.headConstraint) do
                         if typeof(obj) == "Instance" then obj:Destroy() end
                     end
                 end)
-                if state.headsitObjects[5] then
-                    pcall(function() state.headsitObjects[5]:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+                if state.headConstraint[5] then
+                    pcall(function() state.headConstraint[5]:ChangeState(Enum.HumanoidStateType.GettingUp) end)
                 end
-                state.headsitObjects = nil
+                state.headConstraint = nil
             end
-        end
-    end })
-
-    PlayerTab:Button({ Title = "UnHeadSit (Force Remove)", Callback = function()
-        if state.headsitObjects then
-            pcall(function()
-                for _,obj in ipairs(state.headsitObjects) do
-                    if typeof(obj) == "Instance" then obj:Destroy() end
-                end
-            end)
-            if state.headsitObjects[5] then
-                pcall(function() state.headsitObjects[5]:ChangeState(Enum.HumanoidStateType.GettingUp) end)
-            end
-            state.headsitObjects = nil
-            Notify({ Title = "HeadSit", Content = "Removed", Duration = 2 })
-        else
-            Notify({ Title = "HeadSit", Content = "Not active", Duration = 2 })
         end
     end })
 
