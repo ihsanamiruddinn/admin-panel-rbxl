@@ -714,108 +714,168 @@ do
     end })
 end
 
+local function safeGetHumanoid(player)
+    local char = player and player.Character
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+local function updateLocalPlayerHeader()
+    local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(LocalPlayer.UserId).."&width=150&height=150&format=png"
+    local display = "(Si Scripter)"
+    local titleText = LocalPlayer.Name
+    if display and display ~= "" and display ~= titleText then
+        titleText = titleText.." "..display
+    end
+    PlayerTab:Paragraph({ Title = titleText, Desc = "Bio: Loading...", Image = thumbUrl, ImageSize = 56 })
+    pcall(function()
+        local okDesc, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
+        if okDesc and desc and desc ~= "" then
+            for _,c in ipairs(PlayerTab:GetControls()) do
+                if c and c.SetDesc then
+                    pcall(function() c:SetDesc("Bio: "..desc) end)
+                    break
+                end
+            end
+        else
+            for _,c in ipairs(PlayerTab:GetControls()) do
+                if c and c.SetDesc then
+                    pcall(function() c:SetDesc("Bio: No bio") end)
+                    break
+                end
+            end
+        end
+    end)
+end
+
+local emoteIds = {
+    Wave = 507770239,
+    Cheer = 507770453,
+    Laugh = 507770818,
+    Dance1 = 507771019,
+    Dance2 = 507771955,
+    Dance3 = 507772104,
+    Point = 507770678
+}
+
+local currentEmoteTrack = nil
+
+local function playEmoteById(id)
+    local hum = GetHumanoid()
+    if not hum then return end
+    pcall(function()
+        if currentEmoteTrack then
+            currentEmoteTrack:Stop()
+            currentEmoteTrack = nil
+        end
+    end)
+    pcall(function()
+        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://"..tostring(id)
+        local track = animator:LoadAnimation(anim)
+        track.Priority = Enum.AnimationPriority.Action
+        track.Looped = true
+        track:Play()
+        currentEmoteTrack = track
+    end)
+end
+
+local function stopCurrentEmote()
+    if currentEmoteTrack then
+        pcall(function() currentEmoteTrack:Stop() end)
+        currentEmoteTrack = nil
+    end
+end
+
 pcall(function()
-    local topbar = nil
-    if Window.GetTopbar then
-        pcall(function() topbar = Window:GetTopbar() end)
+    local buttons = {}
+    buttons["Wave"] = emoteIds.Wave
+    buttons["Cheer"] = emoteIds.Cheer
+    buttons["Laugh"] = emoteIds.Laugh
+    buttons["Dance 1"] = emoteIds.Dance1
+    buttons["Dance 2"] = emoteIds.Dance2
+    buttons["Dance 3"] = emoteIds.Dance3
+    buttons["Point"] = emoteIds.Point
+    for name,id in pairs(buttons) do
+        EmoteTab:Button({ Title = name, Icon = "music", Callback = function()
+            stopCurrentEmote()
+            playEmoteById(id)
+            Notify({ Title = "Emote", Content = name.." playing", Duration = 2 })
+        end })
     end
-    if not topbar and Window.GetMain then
-        pcall(function() topbar = Window:GetMain():FindFirstChild("Topbar", true) end)
-        if not topbar then
-            pcall(function() topbar = Window:GetMain() end)
+    EmoteTab:Button({ Title = "Stop Current Emote", Icon = "x", Callback = function()
+        stopCurrentEmote()
+        Notify({ Title = "Emote", Content = "Stopped", Duration = 2 })
+    end })
+end)
+
+pcall(function()
+    updateLocalPlayerHeader()
+end)
+
+pcall(function()
+    local function ensureButton(title, cb)
+        local found = false
+        for _,c in ipairs(PlayerTab:GetControls()) do
+            if c and c.Get and c.Title and tostring(c.Title) == title then found = true break end
+        end
+        if not found then
+            PlayerTab:Button({ Title = title, Callback = cb })
         end
     end
-    if topbar then
-        -- Remove old logos if any
-        local old = topbar:FindFirstChild("CustomLogo")
-        if old then old:Destroy() end
-        -- Create new logo
-        local logo = Instance.new("ImageButton")
-        logo.Name = "CustomLogo"
-        logo.Size = UDim2.fromOffset(64,64)
-        logo.Position = UDim2.new(0,6,0.5,0)
-        logo.AnchorPoint = Vector2.new(0,0.5)
-        logo.BackgroundTransparency = 1
-        logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
-        logo.ZIndex = 50
-        local uic = Instance.new("UICorner")
-        uic.CornerRadius = UDim.new(1,0)
-        uic.Parent = logo
-        logo.Parent = topbar
 
-        -- Setup dragging
-        local dragging = false
-        local dragStart = Vector2.new(0,0)
-        local frameStart = UDim2.new(0,0,0,0)
-        logo.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-                dragStart = input.Position
-                local main = Window.GetMain and Window:GetMain()
-                if main then frameStart = main.Position end
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
-                end)
+    ensureButton("Teleport", function()
+        local t = state.selectedPlayer
+        if not t or not t.Character then Notify({ Title = "Teleport", Content = "No player selected", Duration = 2 }) return end
+        local thrp = t.Character:FindFirstChild("HumanoidRootPart")
+        local hrp = GetHRPLocal()
+        if thrp and hrp then
+            pcall(function() hrp.CFrame = thrp.CFrame + Vector3.new(0,2,0) end)
+            Notify({ Title = "Teleport", Content = "Teleported to "..t.Name, Duration = 2 })
+        else
+            Notify({ Title = "Teleport", Content = "HRP missing for target or you", Duration = 2 })
+        end
+    end)
+
+    ensureButton("Bring", function()
+        local t = state.selectedPlayer
+        local hrp = GetHRPLocal()
+        if not t or not t.Character or not hrp then Notify({ Title = "Bring", Content = "Missing selection or your HRP", Duration = 2 }) return end
+        pcall(function() t.Character:MoveTo(hrp.Position + Vector3.new(0,2,0)) end)
+        Notify({ Title = "Bring", Content = "Requested bring for "..t.Name, Duration = 2 })
+    end)
+
+    ensureButton("Fling", function()
+        local t = state.selectedPlayer
+        if not t or not t.Character then Notify({ Title = "Fling", Content = "No player selected", Duration = 2 }) return end
+        local thrp = t.Character:FindFirstChild("HumanoidRootPart")
+        if thrp then
+            pcall(function() thrp.Velocity = Vector3.new(0,500,0) end)
+            Notify({ Title = "Fling", Content = "Flinged "..t.Name, Duration = 2 })
+        else
+            Notify({ Title = "Fling", Content = "Target HRP not found", Duration = 2 })
+        end
+    end)
+
+    ensureButton("Freeze", function()
+        local t = state.selectedPlayer
+        if not t or not t.Character then Notify({ Title = "Freeze", Content = "No player selected", Duration = 2 }) return end
+        pcall(function()
+            for _, part in ipairs(t.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.Anchored = true end
             end
         end)
-        local dragInput = nil
-        logo.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and input == dragInput then
-                local delta = input.Position - dragStart
-                local main = Window.GetMain and Window:GetMain()
-                if main then
-                    pcall(function()
-                        main.Position = frameStart + UDim2.fromOffset(delta.X, delta.Y)
-                    end)
+        Notify({ Title = "Freeze", Content = "Anchored "..t.Name, Duration = 2 })
+    end)
+
+    ensureButton("Unfreeze All (client-side)", function()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character then
+                for _, part in pairs(p.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.Anchored = false end
                 end
             end
-        end)
-
-        -- Toggle minimize/restore
-        logo.MouseButton1Click:Connect(function()
-            pcall(function()
-                if Window.IsMinimized and Window:IsMinimized() then
-                    if Window.Restore then Window:Restore() end
-                else
-                    if Window.Minimize then Window:Minimize() end
-                end
-            end)
-        end)
-
-        -- Minimize/restore handling
-        local backup = {}
-        if Window.OnMinimize then
-            Window.OnMinimize:Connect(function()
-                pcall(function()
-                    backup = {}
-                    for _,c in ipairs(topbar:GetChildren()) do
-                        if c ~= logo then
-                            if c:IsA("GuiObject") then
-                                backup[c] = c.Visible
-                                c.Visible = false
-                            end
-                        end
-                    end
-                    logo.Size = UDim2.fromOffset(64,64)
-                    logo.Position = UDim2.new(0,10,0.5,0)
-                end)
-            end)
         end
-        if Window.OnRestore then
-            Window.OnRestore:Connect(function()
-                pcall(function()
-                    for c,vis in pairs(backup) do
-                        if typeof(c) == "Instance" and c:IsA("GuiObject") then
-                            pcall(function() c.Visible = vis end)
-                        end
-                    end
-                    logo.Size = UDim2.fromOffset(64,64)
-                    logo.Position = UDim2.new(0,6,0.5,0)
-                end)
-            end)
-        end
-    end
+        Notify({ Title = "Freeze", Content = "Unfreeze attempted (client-side)", Duration = 2 })
+    end)
 end)
