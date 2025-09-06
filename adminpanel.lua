@@ -82,6 +82,7 @@ local state = {
     fullbright = false,
     fbPrev = {},
     autoRejoinConn = nil,
+    currentEmote = nil,
 }
 
 local function GetCharacter()
@@ -227,17 +228,52 @@ ExecTab:Toggle({ Title = "Auto Rejoin (on kick/disconnect)", Value = false, Call
     end
 end })
 
-local emotes = {
-    { Name = "Dance 1" },
-    { Name = "Dance 2" },
-    { Name = "Dance Crazy" },
-    { Name = "Float Dance" },
-    { Name = "Freeze Fly" },
+for _, e in ipairs(emotes_list) do end
+
+local emotes_list = {
+    { Name = "Wave", Id = 507770239 },
+    { Name = "Cheer", Id = 507770453 },
+    { Name = "Laugh", Id = 507770818 },
+    { Name = "Dance 1", Id = 507771019 },
+    { Name = "Dance 2", Id = 507771955 },
+    { Name = "Dance 3", Id = 507772104 },
+    { Name = "Point", Id = 507770678 },
+    { Name = "Salute", Id = 507771450 },
+    { Name = "Applaud", Id = 507771230 },
+    { Name = "Dab", Id = 507772500 },
+    { Name = "Floss", Id = 507772900 },
+    { Name = "Robot", Id = 507773200 },
 }
-for _, e in ipairs(emotes) do
-    EmoteTab:Button({ Title = e.Name, Icon = "music", Callback = function() Notify({ Title = "Emote", Content = e.Name, Duration = 2 }) end })
+
+for _, e in ipairs(emotes_list) do
+    EmoteTab:Button({ Title = e.Name, Icon = "music", Callback = function()
+        local hum = GetHumanoid()
+        if hum then
+            pcall(function()
+                if state.currentEmote then
+                    state.currentEmote:Stop()
+                    state.currentEmote = nil
+                end
+            end)
+            pcall(function()
+                local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+                local anim = Instance.new("Animation")
+                anim.AnimationId = "rbxassetid://"..tostring(e.Id)
+                local track = animator:LoadAnimation(anim)
+                track.Priority = Enum.AnimationPriority.Action
+                track.Looped = true
+                track:Play()
+                state.currentEmote = track
+            end)
+        end
+    end })
 end
-EmoteTab:Button({ Title = "Stop Emote", Icon = "stop-circle", Callback = function() Notify({ Title = "Emote", Content = "Stopped", Duration = 2 }) end })
+EmoteTab:Button({ Title = "Stop Emote", Icon = "x", Callback = function()
+    if state.currentEmote then
+        pcall(function() state.currentEmote:Stop() end)
+        state.currentEmote = nil
+    end
+end })
 
 AppearanceTab:Paragraph({ Title = "Customize Interface", Desc = "Theme & Transparency", Image = "palette", ImageSize = 20 })
 local themes = {}
@@ -360,167 +396,29 @@ pcall(function()
     if Window.UpdateTransparency then Window:UpdateTransparency() else Window:ToggleTransparency(WindUI.TransparencyValue > 0) end
 end)
 
-pcall(function()
-    local topbar = nil
-    if Window.GetTopbar then
-        pcall(function() topbar = Window:GetTopbar() end)
-    end
-    if not topbar and Window.GetMain then
-        pcall(function() topbar = Window:GetMain():FindFirstChild("Topbar", true) end)
-        if not topbar then
-            pcall(function()
-    local topbar = nil
-    if Window.GetTopbar then
-        pcall(function() topbar = Window:GetTopbar() end)
-    end
-    if not topbar and Window.GetMain then
-        pcall(function() topbar = Window:GetMain():FindFirstChild("Topbar", true) end)
-        if not topbar then
-            pcall(function() topbar = Window:GetMain() end)
-        end
-    end
-    if topbar then
-        local logo = topbar:FindFirstChild("CustomLogo")
-        if not logo then
-            logo = Instance.new("ImageButton")
-            logo.Name = "CustomLogo"
-            logo.Size = UDim2.fromOffset(32,32)
-            logo.Position = UDim2.new(0,6,0.5,0)
-            logo.AnchorPoint = Vector2.new(0,0.5)
-            logo.BackgroundTransparency = 1
-            logo.Image = "https://raw.githubusercontent.com/ihsanamiruddinn/admin-panel-rbxl/main/logo.png"
-            logo.ZIndex = 5
-            local uic = Instance.new("UICorner")
-            uic.CornerRadius = UDim.new(1,0)
-            uic.Parent = logo
-            logo.Parent = topbar
-        end
-        local titleLabel = topbar:FindFirstChild("TripleSLabel")
-        if not titleLabel then
-            titleLabel = Instance.new("TextLabel")
-            titleLabel.Name = "TripleSLabel"
-            titleLabel.Size = UDim2.new(0,100,0,20)
-            titleLabel.Position = UDim2.new(0,46,0.5,0)
-            titleLabel.AnchorPoint = Vector2.new(0,0.5)
-            titleLabel.BackgroundTransparency = 1
-            titleLabel.Font = Enum.Font.SourceSansSemibold
-            titleLabel.TextSize = 14
-            titleLabel.TextColor3 = Color3.fromRGB(220,220,220)
-            titleLabel.Parent = topbar
-        end
-        titleLabel.Text = "TripleS"
-        local ver = topbar:FindFirstChild("VersionTag")
-        if not ver then
-            ver = Instance.new("TextLabel")
-            ver.Name = "VersionTag"
-            ver.Size = UDim2.new(0,58,0,18)
-            ver.AnchorPoint = Vector2.new(1,0.5)
-            ver.Position = UDim2.new(1,-52,0.5,0)
-            ver.BackgroundTransparency = 1
-            ver.Font = Enum.Font.SourceSansSemibold
-            ver.TextSize = 12
-            ver.TextColor3 = Color3.fromRGB(200,200,200)
-            ver.Parent = topbar
-        end
-        ver.Text = "v4.0"
-        local backup = {}
-        logo.MouseButton1Click:Connect(function()
-            pcall(function()
-                if Window.IsMinimized and Window:IsMinimized() then
-                    if Window.Restore then Window:Restore() end
-                else
-                    if Window.Minimize then Window:Minimize() end
-                end
-            end)
-        end)
-        if Window.OnMinimize then
-            Window.OnMinimize:Connect(function()
-                pcall(function()
-                    backup = {}
-                    for _,c in ipairs(topbar:GetChildren()) do
-                        if c ~= logo then
-                            if c:IsA("GuiObject") then
-                                backup[c] = c.Visible
-                                c.Visible = false
-                            end
-                        end
-                    end
-                    logo.Size = UDim2.fromOffset(32,32)
-                    logo.Position = UDim2.new(0,10,0.5,0)
-                end)
-            end)
-        end
-        if Window.OnRestore then
-            Window.OnRestore:Connect(function()
-                pcall(function()
-                    for c,vis in pairs(backup) do
-                        if typeof(c) == "Instance" and c:IsA("GuiObject") then
-                            pcall(function() c.Visible = vis end)
-                        end
-                    end
-                    logo.Size = UDim2.fromOffset(32,32)
-                    logo.Position = UDim2.new(0,6,0.5,0)
-                end)
-            end)
-        end
-    end
-end)
-        end
-
-        if Window.OnMinimize then
-            Window.OnMinimize:Connect(function()
-                pcall(function()
-                    topbarBackup = {}
-                    for _,c in ipairs(topbar:GetChildren()) do
-                        if c ~= logo then
-                            local ok, vis = pcall(function() return c.Visible end)
-                            if ok then
-                                topbarBackup[c] = vis
-                                pcall(function() c.Visible = false end)
-                            else
-                                topbarBackup[c] = nil
-                                pcall(function() if c:IsA("GuiObject") then c.Visible = false end end)
-                            end
-                        end
-                    end
-                    logo.Size = UDim2.fromOffset(32,32)
-                    logo.Position = UDim2.new(0,10,0.5,0)
-                end)
-            end)
-        end
-        if Window.OnRestore then
-            Window.OnRestore:Connect(function()
-                pcall(function()
-                    for c,vis in pairs(topbarBackup) do
-                        if typeof(c) == "Instance" then
-                            pcall(function() c.Visible = vis end)
-                        end
-                    end
-                    logo.Size = UDim2.fromOffset(32,32)
-                    logo.Position = UDim2.new(0,6,0.5,0)
-                end)
-            end)
-        end
-    end
-end)
-
-pcall(function()
-    local stroke = Window:GetMain():FindFirstChildWhichIsA("UIStroke", true)
-    if stroke then
-        Window.OnMinimize:Connect(function() pcall(function() stroke.Color = Color3.fromRGB(57,255,20) end) end)
-        Window.OnRestore:Connect(function() pcall(function() stroke.Color = Color3.fromRGB(0,200,0) end) end)
-    end
-end)
-
 do
-    local topPara = PlayerTab:Paragraph({ Title = LocalPlayer.Name, Desc = "Bio: Loading...", Image = "rbxasset://textures/ui/GuiImagePlaceholder.png", ImageSize = 56 })
-    pcall(function()
-        local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(LocalPlayer.UserId).."&width=150&height=150&format=png"
-        pcall(function() topPara:SetImage(thumbUrl) end)
-    end)
-    pcall(function()
+    for _,c in ipairs(PlayerTab:GetControls()) do
+        if c and c.Destroy and tostring(c.Title) == LocalPlayer.Name then
+            pcall(function() c:Destroy() end)
+        end
+    end
+    local displayName = LocalPlayer.DisplayName or LocalPlayer.Name
+    local userName = LocalPlayer.Name
+    local headerText = displayName.." (Scripter)"
+    local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(LocalPlayer.UserId).."&width=150&height=150&format=png"
+    local infoPara = PlayerTab:Paragraph({
+        Title = headerText,
+        Desc = "@"..userName.."\nBio: Loading...",
+        Image = thumbUrl,
+        ImageSize = 56
+    })
+    task.spawn(function()
         local okDesc, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
-        if okDesc and desc and desc ~= "" then pcall(function() topPara:SetDesc("Bio: "..desc) end) else pcall(function() topPara:SetDesc("Bio: No bio") end) end
+        if okDesc and desc and desc ~= "" then
+            pcall(function() infoPara:SetDesc("@"..userName.."\nBio: "..desc) end)
+        else
+            pcall(function() infoPara:SetDesc("@"..userName.."\nBio: No bio") end)
+        end
     end)
 
     PlayerTab:Input({ Title = "Goto Part (type name and press Enter)", Placeholder = "Part name", Callback = function(txt)
@@ -628,7 +526,6 @@ do
             state.headConstraint = {a0, a1, alignPos, alignOri, humanoid, targetHRP}
             Notify({ Title = "HeadSit", Content = "Piggyback attached to "..t.Name, Duration = 2 })
             task.spawn(function()
-                local last = 0
                 while state.headConstraint do
                     local ok, alive = pcall(function() return state.headConstraint and state.headConstraint[6] and state.headConstraint[6].Parent end)
                     if not ok or not alive then
@@ -714,30 +611,15 @@ do
     end })
 end
 
--- Clear old player info and rebuild proper header
-for _,c in ipairs(PlayerTab:GetControls()) do
-    if c and c.Title and tostring(c.Title) == LocalPlayer.Name then
-        if c.Destroy then pcall(function() c:Destroy() end) end
-    end
-end
+Window:OnClose(function()
+    if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end
+    Notify({ Title = "AdminPanel", Content = "Closed", Duration = 2 })
+end)
 
-local displayName = LocalPlayer.DisplayName or LocalPlayer.Name
-local userName = LocalPlayer.Name
-local headerText = displayName.." (Scripter)"
-local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..tostring(LocalPlayer.UserId).."&width=150&height=150&format=png"
+Window:OnDestroy(function()
+    if state.autoRejoinConn then state.autoRejoinConn:Disconnect() state.autoRejoinConn = nil end
+end)
 
-local infoPara = PlayerTab:Paragraph({
-    Title = headerText,
-    Desc = "@"..userName.."\nBio: Loading...",
-    Image = thumbUrl,
-    ImageSize = 56
-})
-
-task.spawn(function()
-    local okDesc, desc = pcall(function() return Players:GetUserDescriptionAsync(LocalPlayer.UserId) end)
-    if okDesc and desc and desc ~= "" then
-        pcall(function() infoPara:SetDesc("@"..userName.."\nBio: "..desc) end)
-    else
-        pcall(function() infoPara:SetDesc("@"..userName.."\nBio: No bio") end)
-    end
+pcall(function()
+    if Window.UpdateTransparency then Window:UpdateTransparency() else Window:ToggleTransparency(WindUI.TransparencyValue > 0) end
 end)
