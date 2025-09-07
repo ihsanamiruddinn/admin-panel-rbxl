@@ -13,7 +13,7 @@ if not ok or not WindUI then
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "AdminPanel",
-            Text = "Failed to load WindUI. Check HTTP and link.",
+            Text = "Gagal memuat WindUI. Periksa HTTP dan tautan.",
             Duration = 5
         })
     end)
